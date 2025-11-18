@@ -1,0 +1,12 @@
+[MASTER]
+ignore = .venv,venv
+
+[MESSAGES CONTROL]
+# Disable indentation-related checks to avoid conflicts with formatter
+disable =
+	bad-indentation,
+	wrong-hanging-indentation,
+	C0330
+
+[FORMAT]
+max-line-length = 88
