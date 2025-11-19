@@ -16,6 +16,8 @@ Assumptions:
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import re
 import sys
 from collections.abc import Callable, Iterable
@@ -34,7 +36,7 @@ except Exception as _e:  # pragma: no cover
 
 
 @dataclass
-class DataStore:
+class NSEDataStore:
     """Loads and caches NSE CM data from the `data/` folder.
 
     - Scans the folder once for CSV/Parquet files.
@@ -95,8 +97,8 @@ class DataStore:
                 df = pd.read_parquet(path)
         except Exception as e:  # pragma: no cover
             print(f"Warning: failed to load {path.name}: {e}", file=sys.stderr)
-            df = _empty_normalized_df()
-        df = _normalize_schema(df)
+            df = _empty_normalized_nse_df()
+        df = _normalize_schema_nse(df)
         self._file_cache[path] = df
         return df
 
@@ -118,7 +120,7 @@ class DataStore:
         frames = [f for f in (self._load_file(p) for p in self.files) if _usable(f)]
         if not frames:
             # empty schema with expected columns
-            self._combined_cache = _empty_normalized_df()
+            self._combined_cache = _empty_normalized_nse_df()
             return self._combined_cache
         # Suppress known concat FutureWarning locally
         import warnings
@@ -139,7 +141,7 @@ class DataStore:
 
 
 # Helper: create empty normalized DataFrame with canonical columns
-def _empty_normalized_df() -> pd.DataFrame:
+def _empty_normalized_nse_df() -> pd.DataFrame:
     cols = [
         "SYMBOL",
         "DATE",
@@ -154,7 +156,7 @@ def _empty_normalized_df() -> pd.DataFrame:
 
 
 # Normalize raw file schema to canonical columns and types
-def _normalize_schema(df: pd.DataFrame) -> pd.DataFrame:
+def _normalize_schema_nse(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize column names and types to a canonical schema.
 
     - Consolidate date column to `DATE` (date, not datetime).
@@ -272,14 +274,17 @@ class ToolRegistry:
 
     # Register a tool function under a name
     def register(self, name: str, fn: ToolFn) -> None:
+        """Register a tool function under a name."""
         self._tools[name] = fn
 
     # Retrieve a tool by name
     def get(self, name: str) -> ToolFn:
+        """Retrieve a tool function by name."""
         return self._tools[name]
 
     # Iterate (name, function) pairs
     def items(self) -> Iterable[tuple[str, ToolFn]]:
+        """Iterate over registered tools as (name, function) pairs."""
         return self._tools.items()
 
 
@@ -367,7 +372,7 @@ def _date_range_filter(
 
 
 @tool("list_available_dates")
-def list_available_dates(store: DataStore) -> list[str]:
+def list_available_dates(store: NSEDataStore) -> list[str]:
     """Return all trading dates found in the data as ISO strings (YYYY-MM-DD)."""
 
     dates = sorted({d for d in store.df["DATE"].dropna().unique().tolist()})
@@ -375,7 +380,7 @@ def list_available_dates(store: DataStore) -> list[str]:
 
 
 @tool("list_symbols")
-def list_symbols(store: DataStore, date_v: str) -> list[str]:
+def list_symbols(store: NSEDataStore, date_v: str) -> list[str]:
     """List symbols traded on a given date (YYYY-MM-DD)."""
 
     d = parse_date(date_v)
@@ -389,7 +394,7 @@ def list_symbols(store: DataStore, date_v: str) -> list[str]:
 
 @tool("get_ohlc_history")
 def get_ohlc_history(
-    store: DataStore,
+    store: NSEDataStore,
     symbol: str,
     start_date: str | None = None,
     end_date: str | None = None,
@@ -430,7 +435,7 @@ def get_ohlc_history(
 
 @tool("summarize_symbol")
 def summarize_symbol(
-    store: DataStore,
+    store: NSEDataStore,
     symbol: str,
     start_date: str | None = None,
     end_date: str | None = None,
@@ -503,7 +508,7 @@ def summarize_symbol(
 
 @tool("top_traded_by_value")
 def top_traded_by_value(
-    store: DataStore, date_v: str, n: int = 10
+    store: NSEDataStore, date_v: str, n: int = 10
 ) -> list[dict[str, Any]]:
     """Top-N symbols by total traded value (TOTTRDVAL) on a given date (YYYY-MM-DD)."""
 
@@ -549,13 +554,41 @@ def _is_finite(x: Any) -> bool:
         return False
 
 
+# ----------------------------- Env File Support -----------------------------
+
+
+def _load_env_file(path: Path) -> None:
+    """Load simple KEY=VALUE pairs from a .env file into os.environ.
+
+    - Lines starting with '#' or empty lines are ignored.
+    - Quotes around values are stripped.
+    - Does not overwrite variables already present in the environment.
+    """
+
+    try:
+        content = path.read_text(encoding="utf-8")
+    except Exception:
+        return
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, val = line.split("=", 1)
+        key = key.strip()
+        val = val.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
 # ------------------------------------ Agent -----------------------------------
 
 
 class Agent:
     """Simple planner that selects appropriate tools based on the question."""
 
-    def __init__(self, store: DataStore) -> None:
+    def __init__(self, store: NSEDataStore) -> None:
         self.store = store
 
     def run(self, question: str) -> str:
@@ -597,7 +630,13 @@ class Agent:
             end = str(dates[1]) if len(dates) >= 2 else None
 
             # Guess symbol from candidates on relevant dates or full set
-            all_syms = self._all_symbols()
+            df_all = self.store.df
+            all_syms = sorted(
+                {
+                    s
+                    for s in df_all["SYMBOL"].dropna().astype(str).unique().tolist()
+                }
+            )
             sym = guess_symbol(q, all_syms)
             if not sym:
                 return (
@@ -617,7 +656,10 @@ class Agent:
             return "Symbols on {d}:\n- ".format(d=str(dates[0])) + "\n- ".join(syms)
 
         # 5) Fallback: try to find a symbol and produce a quick summary
-        all_syms = self._all_symbols()
+        df_all = self.store.df
+        all_syms = sorted(
+            {s for s in df_all["SYMBOL"].dropna().astype(str).unique().tolist()}
+        )
         sym = guess_symbol(q, all_syms)
         if sym:
             summary = summarize_symbol(self.store, sym, None, None)
@@ -630,9 +672,130 @@ class Agent:
             "- List symbols on 2023-01-02"
         )
 
-    def _all_symbols(self) -> list[str]:
-        df = self.store.df
-        return sorted({s for s in df["SYMBOL"].dropna().astype(str).unique().tolist()})
+
+class GeminiPlanner:
+    """Gemini-based planner that produces a tool invocation plan.
+
+    Expects GOOGLE_API_KEY env var. Uses `google-generativeai` SDK if available.
+    Falls back silently if SDK or key is missing.
+    """
+
+    MODEL_NAME = "gemini-1.5-flash"
+
+    def __init__(self) -> None:
+        self.enabled = False
+        # Load GOOGLE_API_KEY from a local .env file if present
+        try:
+            candidates = [Path.cwd() / ".env", Path(__file__).resolve().parent / ".env"]
+            for p in candidates:
+                if p.exists():
+                    _load_env_file(p)
+        except Exception:
+            pass
+
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            return
+        try:  # lazy import to avoid hard dependency if user opts out
+            import google.generativeai as genai  # type: ignore
+        except Exception:  # pragma: no cover - missing package
+            return
+        try:
+            cfg = getattr(genai, "configure", None)
+            if callable(cfg):
+                cfg(api_key=api_key)
+            self._genai = genai
+            self.enabled = True
+        except Exception:  # pragma: no cover
+            self.enabled = False
+
+    def _tool_manifest(self) -> list[dict[str, Any]]:
+        manifest: list[dict[str, Any]] = []
+        for name, fn in TOOLS.items():
+            doc = (fn.__doc__ or "").strip()
+            manifest.append({"name": name, "doc": doc})
+        return manifest
+
+    def plan(self, question: str) -> list[dict[str, Any]]:
+        """Return a list of tool call dicts: {name: str, args: {...}}."""
+        if not self.enabled:
+            return []
+        prompt = {
+            "instruction": "Plan tool calls to answer the user question.",
+            "question": question,
+            "tools": self._tool_manifest(),
+            "output_format": {
+                "type": "json",
+                "schema": {
+                    "tool_calls": [
+                        {"name": "string", "args": "object"}
+                    ]
+                },
+            },
+            "constraints": [
+                "Use the minimum number of tool calls",
+                "Only use tools listed in 'tools'",
+                "If impossible, return empty tool_calls array",
+            ],
+        }
+        try:
+            model_cls = getattr(self._genai, "GenerativeModel", None)
+            if model_cls is None:
+                return []
+            model = model_cls(self.MODEL_NAME)
+            resp = model.generate_content(
+                [
+                    "You are a planning assistant.",
+                    "Return ONLY valid JSON matching the schema.",
+                    json.dumps(prompt),
+                ]
+            )
+            text = getattr(resp, "text", "") or "".join(
+                getattr(resp, "candidates", [])
+            )
+        except Exception:  # pragma: no cover
+            return []
+        # Extract JSON block
+        try:
+            json_start = text.find("{")
+            json_end = text.rfind("}")
+            if json_start == -1 or json_end == -1:
+                return []
+            data = json.loads(text[json_start : json_end + 1])
+            calls = data.get("tool_calls") or []
+            out: list[dict[str, Any]] = []
+            for c in calls:
+                name = c.get("name")
+                if not name or name not in TOOLS._tools:  # type: ignore[attr-defined]
+                    continue
+                args = c.get("args") or {}
+                if not isinstance(args, dict):
+                    continue
+                out.append({"name": name, "args": args})
+            return out
+        except Exception:
+            return []
+
+
+def execute_plan(store: NSEDataStore, plan: list[dict[str, Any]]) -> list[Any]:
+    """Execute a list of tool call dicts and return their raw results."""
+    results: list[Any] = []
+    for step in plan:
+        name = step.get("name")
+        args = step.get("args", {})
+        if not name:
+            continue
+        try:
+            fn = TOOLS.get(name)
+            # Inject store automatically if first parameter expects it
+            # All tool signatures have store as first arg.
+            res = fn(store, **args)
+            results.append({"tool": name, "result": res})
+        except Exception as e:
+            results.append({"tool": name, "error": str(e)})
+    return results
+
+    # Removed helper methods (inline symbol extraction used instead for lint simplicity)
 
 
 def _render_summary(s: dict[str, Any]) -> str:
@@ -652,12 +815,42 @@ def _render_summary(s: dict[str, Any]) -> str:
 # ------------------------------------ CLI ------------------------------------
 
 
+class AdkTask:
+    """Simple Google ADK-style task wrapper around the local Agent.
+
+    This provides an ADK-like entrypoint (task.run) that delegates planning and
+    tool execution to the in-process Agent defined above. It's designed so the
+    wiring can be swapped with an actual Google ADK runner without changing
+    business logic or tool implementations.
+    """
+
+    def __init__(self, store: NSEDataStore) -> None:
+        self._agent = Agent(store)
+
+    def run(self, question: str) -> str:
+        """Run the task with the given question and return the answer string."""
+        return self._agent.run(question)
+
+
+def create_adk_task(store: NSEDataStore) -> AdkTask:
+    """Factory returning an ADK-style task bound to our registered tools.
+
+    In a real Google ADK setup, this is where you'd:
+    - register tool functions with the ADK runtime,
+    - configure the model and planning policies,
+    - and return the task/agent instance from the ADK SDK.
+    For now, we return a thin wrapper that mirrors the ADK interface.
+    """
+
+    return AdkTask(store)
+
+
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry point for NSE CM Agent.
+    """CLI entry point for NSE CM Agent via an ADK-style task.
     1. Parses command-line arguments.
     2. Loads data from specified folder.
-    3. Instantiates the agent.
-    4. Runs the agent with the provided query.
+    3. Creates an ADK task bound to the tools.
+    4. Runs the task with the provided query.
     5. Prints the answer or error message.
     """
     parser = argparse.ArgumentParser(description="NSE CM Agent")
@@ -686,14 +879,30 @@ def main(argv: list[str] | None = None) -> int:
         query = sys.stdin.read().strip()
 
     try:
-        store = DataStore(Path(args.data))
+        nse_data = NSEDataStore(Path(args.data))
     except FileNotFoundError as e:
         print(str(e))
         return 2
 
-    agent = Agent(store)
+    adk_task = create_adk_task(nse_data)
+    gemini_planner = GeminiPlanner()
     try:
-        answer = agent.run(query)
+        # Attempt Gemini planning path
+        gemini_plan = gemini_planner.plan(query)
+        if gemini_plan:
+            executed = execute_plan(nse_data, gemini_plan)
+            # Basic synthesis: if single summarize_symbol output, render summary
+            if (
+                len(executed) == 1
+                and executed[0]["tool"] == "summarize_symbol"
+                and isinstance(executed[0]["result"], dict)
+            ):
+                answer = _render_summary(executed[0]["result"])
+            else:
+                answer = json.dumps(executed, indent=2)
+        else:
+            # Fallback to heuristic agent
+            answer = adk_task.run(query)
     except Exception as e:
         print(f"Error: {e}")
         return 1
