@@ -1,5 +1,7 @@
 import logging
 import os
+import sys
+import io
 
 # Clean up any previous logs
 for log_file in ["logger.log", "web.log", "tunnel.log"]:
@@ -33,11 +35,28 @@ def get_logger(name: str):
         for h in logger.handlers
     )
     if not has_file:
-        fh = logging.FileHandler(_LOG_FILE)
+        fh = logging.FileHandler(_LOG_FILE, encoding="utf-8")
         fh.setLevel(logging.DEBUG)
         fmt = logging.Formatter("%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s")
         fh.setFormatter(fmt)
         logger.addHandler(fh)
+
+    # Attach a stream handler that safely writes UTF-8 (replace unencodable chars).
+    has_stream = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+    if not has_stream:
+        # Wrap the stdout buffer with a TextIOWrapper that encodes to utf-8 and replaces errors.
+        try:
+            utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
+            sh = logging.StreamHandler(stream=utf8_stdout)
+        except Exception:
+            # Fallback to default StreamHandler if wrapping fails.
+            sh = logging.StreamHandler()
+        sh.setLevel(logging.INFO)
+        sh.setFormatter(logging.Formatter("%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s"))
+        # Keep a reference so the wrapper isn't garbage-collected.
+        if hasattr(sh, "stream"):
+            sh._utf8_stream = getattr(sh, "stream")
+        logger.addHandler(sh)
 
     return logger
 

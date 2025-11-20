@@ -62,7 +62,7 @@ class DataStore:
         files = list(data_path.rglob("*.csv")) + list(data_path.rglob("*.parquet"))
         
         print(f"📂 Loading {len(files)} data files...")
-        for p in files[:10]:
+        for p in files:
             try:
                 if "news" in str(p).lower(): continue
                 if p.suffix == ".csv":

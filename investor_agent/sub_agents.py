@@ -3,6 +3,7 @@ from google.adk.models.google_llm import Gemini
 from google.adk.tools import google_search
 from investor_agent import prompts
 from investor_agent import tools
+from investor_agent import schemas
 from investor_agent.data_engine import STORE
 
 def create_pipeline(model: Gemini) -> SequentialAgent:
@@ -15,6 +16,8 @@ def create_pipeline(model: Gemini) -> SequentialAgent:
         name="MarketAnalyst",
         model=model,
         instruction=market_prompt,
+        output_schema=schemas.MarketAnalysisOutput,  # Structured JSON output
+        output_key="market_analysis",  # Store in state['market_analysis']
         # Direct tool access
         tools=[tools.rank_market_performance, tools.analyze_single_stock, tools.check_data_availability]
     )
@@ -25,6 +28,8 @@ def create_pipeline(model: Gemini) -> SequentialAgent:
         name="NewsAnalyst",
         model=model,
         instruction=prompts.NEWS_AGENT_PROMPT,
+        # output_schema=schemas.NewsAnalysisOutput,  # Structured JSON output
+        # output_key="news_analysis",  # Store in state['news_analysis']
         tools=[google_search]
     )
 
@@ -37,11 +42,11 @@ def create_pipeline(model: Gemini) -> SequentialAgent:
 
     # 5. Sequential Pipeline (Stable)
     # Market -> News -> Merger
+    # SequentialAgent doesn't take instructions - it just orchestrates the sub-agents
     root_agent = SequentialAgent(
         name="InvestorCopilot",
         sub_agents=[market_agent, news_agent, merger_agent],
-        description="Sequential workflow: Data -> Context -> Report"
-        # instructions=prompts.ROOT_AGENT_PROMPT
+        description="Sequential workflow: Data Analysis -> News Context -> Investment Report"
     )
     
     return root_agent

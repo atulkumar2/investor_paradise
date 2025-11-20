@@ -212,3 +212,6 @@ __marimo__/
 .github
 .env
 data/
+
+# Logs
+*.log

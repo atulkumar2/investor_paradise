@@ -80,7 +80,15 @@ def analyze_single_stock(symbol: str) -> str:
     week_close = recent.iloc[-1]['CLOSE']
     week_change = ((week_close - week_open) / week_open) * 100.0
     
-    avg_deliv = recent['DELIV_PER'].mean()
+    # Handle DELIV_PER column - convert to numeric, handling string/concatenated values
+    try:
+        # Convert to numeric, coercing errors (strings become NaN)
+        deliv_series = pd.to_numeric(recent['DELIV_PER'], errors='coerce')
+        # Calculate mean, skipping NaN values
+        avg_deliv = deliv_series.mean() if not deliv_series.isna().all() else 0.0
+    except (KeyError, AttributeError):
+        # DELIV_PER column doesn't exist or is completely unusable
+        avg_deliv = 0.0
     
     out = f"### Analysis: {symbol}\n"
     out += f"- **Latest Date:** {latest['DATE']}\n"
