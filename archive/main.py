@@ -97,8 +97,8 @@ class NSEDataStore:
                 df = pd.read_parquet(path)
         except Exception as e:  # pragma: no cover
             print(f"Warning: failed to load {path.name}: {e}", file=sys.stderr)
-            df = _empty_normalized_nse_df()
-        df = _normalize_schema_nse(df)
+            df = NSESchemaNormalizer.empty()
+        df = NSESchemaNormalizer.normalize(df)
         self._file_cache[path] = df
         return df
 
@@ -120,8 +120,8 @@ class NSEDataStore:
         frames = [f for f in (self._load_file(p) for p in self.files) if _usable(f)]
         if not frames:
             # empty schema with expected columns
-            self._combined_cache = _empty_normalized_nse_df()
-            return self._combined_cache
+            self._combined_cache = NSESchemaNormalizer.empty()
+            return cast(pd.DataFrame, self._combined_cache)
         # Suppress known concat FutureWarning locally
         import warnings
         with warnings.catch_warnings():
@@ -137,12 +137,13 @@ class NSEDataStore:
         # Ensure dtypes and sorted by date
         combined.sort_values(["DATE", "SYMBOL"], inplace=True, ignore_index=True)
         self._combined_cache = combined
-        return self._combined_cache
+        return cast(pd.DataFrame, self._combined_cache)
 
 
-# Helper: create empty normalized DataFrame with canonical columns
-def _empty_normalized_nse_df() -> pd.DataFrame:
-    cols = [
+class NSESchemaNormalizer:
+    """Helpers for normalizing NSE CM data into a canonical schema."""
+
+    CANONICAL_COLUMNS = [
         "SYMBOL",
         "DATE",
         "OPEN",
@@ -152,82 +153,93 @@ def _empty_normalized_nse_df() -> pd.DataFrame:
         "TOTTRDQTY",
         "TOTTRDVAL",
     ]
-    return pd.DataFrame(columns=cols)
 
+    @classmethod
+    def empty(cls) -> pd.DataFrame:
+        """Create empty normalized DataFrame with canonical columns."""
 
-# Normalize raw file schema to canonical columns and types
-def _normalize_schema_nse(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize column names and types to a canonical schema.
+        return pd.DataFrame(columns=cls.CANONICAL_COLUMNS)
 
-    - Consolidate date column to `DATE` (date, not datetime).
-    - Ensure numeric columns are floats/ints where appropriate.
-    """
+    @classmethod
+    def normalize(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize raw file schema to canonical columns and types."""
 
-    # Standardize column names (strip spaces, upper)
-    rename_map = {c: c.strip().upper() for c in df.columns}
-    df = df.rename(columns=rename_map)
+        df = cls._standardize_columns(df)
+        df = cls._map_alternative_columns(df)
+        df = cls._ensure_date_column(df)
+        df = cls._ensure_symbol_column(df)
+        df = cls._normalize_numeric_columns(df)
+        df = cls._fill_traded_value(df)
+        return cast(pd.DataFrame, df.loc[:, cls.CANONICAL_COLUMNS])
 
-    # Map common alternative column names to canonical ones
-    alt_map = {
-        "OPEN_PRICE": "OPEN",
-        "HIGH_PRICE": "HIGH",
-        "LOW_PRICE": "LOW",
-        "CLOSE_PRICE": "CLOSE",
-        "TTL_TRD_QNTY": "TOTTRDQTY",
-        # TURNOVER_LACS will be used to compute TOTTRDVAL later
-    }
-    for src, dst in alt_map.items():
-        if src in df.columns and dst not in df.columns:
-            df = df.rename(columns={src: dst})
+    @staticmethod
+    def _standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
+        rename_map = {c: c.strip().upper() for c in df.columns}
+        return df.rename(columns=rename_map)
 
-    # Unify date column
-    date_col_candidates = [
-        "DATE",
-        "TIMESTAMP",
-        "DATE/TIMESTAMP",
-        "DATE_",
-        "DATE1",
-    ]
-    date_col = next((c for c in date_col_candidates if c in df.columns), None)
-    if date_col is None:
-        # try to infer any date-like column
-        for c in df.columns:
-            if "DATE" in c:
-                date_col = c
-                break
-    if date_col is None:
-        df["DATE"] = pd.NaT
-    else:
+    @staticmethod
+    def _map_alternative_columns(df: pd.DataFrame) -> pd.DataFrame:
+        alt_map = {
+            "OPEN_PRICE": "OPEN",
+            "HIGH_PRICE": "HIGH",
+            "LOW_PRICE": "LOW",
+            "CLOSE_PRICE": "CLOSE",
+            "TTL_TRD_QNTY": "TOTTRDQTY",
+        }
+        for src, dst in alt_map.items():
+            if src in df.columns and dst not in df.columns:
+                df = df.rename(columns={src: dst})
+        return df
+
+    @staticmethod
+    def _ensure_date_column(df: pd.DataFrame) -> pd.DataFrame:
+        date_col_candidates = [
+            "DATE",
+            "TIMESTAMP",
+            "DATE/TIMESTAMP",
+            "DATE_",
+            "DATE1",
+        ]
+        date_col = next((c for c in date_col_candidates if c in df.columns), None)
+        if date_col is None:
+            for c in df.columns:
+                if "DATE" in c:
+                    date_col = c
+                    break
+        if date_col is None:
+            df["DATE"] = pd.NaT
+            return df
         ser = pd.to_datetime(df[date_col], errors="coerce")
         df["DATE"] = pd.Series(ser).dt.date  # type: ignore[attr-defined]
+        return df
 
-    # Ensure symbol column exists
-    if "SYMBOL" not in df.columns:
-        # try common alternatives
-        for c in ("TICKER", "SECURITY", "SYMB"):
-            if c in df.columns:
-                df = df.rename(columns={c: "SYMBOL"})
-                break
-    if "SYMBOL" not in df.columns:
-        df["SYMBOL"] = None
+    @staticmethod
+    def _ensure_symbol_column(df: pd.DataFrame) -> pd.DataFrame:
+        if "SYMBOL" not in df.columns:
+            for c in ("TICKER", "SECURITY", "SYMB"):
+                if c in df.columns:
+                    df = df.rename(columns={c: "SYMBOL"})
+                    break
+        if "SYMBOL" not in df.columns:
+            df["SYMBOL"] = None
+        return df
 
-    # Numeric columns: strip thousands separators/spaces before coercion
-    numeric_cols = ("OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY", "TOTTRDVAL")
-    for col in numeric_cols:
-        if col in df.columns:
-            # normalize textual numbers like "1,234.56" -> "1234.56"
-            df[col] = df[col].astype(str).str.replace(r"[\s,]", "", regex=True)
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-        else:
-            df[col] = pd.NA
+    @staticmethod
+    def _normalize_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
+        numeric_cols = ("OPEN", "HIGH", "LOW", "CLOSE", "TOTTRDQTY", "TOTTRDVAL")
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.replace(r"[\s,]", "", regex=True)
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+            else:
+                df[col] = pd.NA
+        return df
 
-    # If traded value missing, derive from TURNOVER_LACS (₹ Lakhs) if available,
-    # else approximate via CLOSE * TOTTRDQTY
-    if "TOTTRDVAL" in df.columns:
-        mask_missing_val = df["TOTTRDVAL"].isna()
-        if mask_missing_val.any():
-            # Prefer TURNOVER_LACS when present
-            if "TURNOVER_LACS" in df.columns:
+    @staticmethod
+    def _fill_traded_value(df: pd.DataFrame) -> pd.DataFrame:
+        if "TOTTRDVAL" in df.columns:
+            mask_missing_val = df["TOTTRDVAL"].isna()
+            if mask_missing_val.any() and "TURNOVER_LACS" in df.columns:
                 tval = pd.to_numeric(df["TURNOVER_LACS"], errors="coerce") * 100000.0
                 df.loc[mask_missing_val, "TOTTRDVAL"] = tval[mask_missing_val]
                 mask_missing_val = df["TOTTRDVAL"].isna()
@@ -236,28 +248,12 @@ def _normalize_schema_nse(df: pd.DataFrame) -> pd.DataFrame:
                 vol_num = pd.to_numeric(df["TOTTRDQTY"], errors="coerce")
                 approx = close_num * vol_num
                 df.loc[mask_missing_val, "TOTTRDVAL"] = approx[mask_missing_val]
-    else:
-        # Create TOTTRDVAL from TURNOVER_LACS if available
+            return df
         if "TURNOVER_LACS" in df.columns:
             df["TOTTRDVAL"] = (
                 pd.to_numeric(df["TURNOVER_LACS"], errors="coerce") * 100000.0
             )
-
-    # Keep only expected columns to simplify downstream logic
-    keep = [
-        "SYMBOL",
-        "DATE",
-        "OPEN",
-        "HIGH",
-        "LOW",
-        "CLOSE",
-        "TOTTRDQTY",
-        "TOTTRDVAL",
-    ]
-    missing = [c for c in keep if c not in df.columns]
-    for c in missing:
-        df[c] = pd.NA
-    return cast(pd.DataFrame, df.loc[:, keep])
+        return df
 
 
 # ------------------------------- Tool Registry -------------------------------
