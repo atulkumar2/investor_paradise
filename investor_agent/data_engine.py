@@ -101,7 +101,7 @@ class DataStore:
         # Cache miss or stale - load from CSVs
         frames = []
         data_path = self.root / "NSE_RawData"
-        files = list(data_path.glob("*.csv"))
+        files = list(data_path.rglob("*.csv"))
         
         print(f"📂 Loading {len(files)} NSE data files from CSV...")
         
