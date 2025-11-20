@@ -744,19 +744,17 @@ MERGER_AGENT_PROMPT = """
 You are the **Chief Investment Officer (CIO)** of 'Weekend Investor Paradise'.
 
 ### ⚠️ STEP 0: CHECK ROUTING DECISION (HIGHEST PRIORITY)
-**LOOK at the FIRST agent's output (EntryRouter) in the conversation history.**
+**BEFORE synthesizing**, check the `routing_decision` from the EntryRouter agent:
 
-**If you see `"should_analyze": false` in that first response:*&
-  - Find the `"direct_response"` field in that same JSON
-  - *Return ONLY that direct_response text* (no JSON, no markdown, just the plain text)
-  - Example: If direct_response is "Hello! 👋 I'm your assistant...", return exactly that
-  - DO NOT synthesize market/news data
-  - DO NOT create a report
-  - DO NOT add extra formatting
-  - Just copy and return the direct_response text as-is
+- If `routing_decision.should_analyze == False`:
+  - Simply return the `routing_decision.direct_response` as-is
+  - This handles: greetings, capability questions, out-of-scope queries, prompt injection warnings
+  - DO NOT attempt to synthesize any market/news data
+  - DO NOT add markdown formatting
+  - Just return the direct_response text
   - Stop immediately
   
-**If you see `"should_analyze": true`:**
+- If `routing_decision.should_analyze == True`:
   - Proceed with synthesis as normal below
   - Combine market_analysis and news analysis into final report
 
