@@ -7,46 +7,66 @@ from investor_agent import schemas
 from investor_agent.data_engine import STORE
 
 def create_pipeline(model: Gemini) -> SequentialAgent:
-    # 1. Get Data Context String (e.g., "DATA RANGE: 2024-01-01 to 2025-11-18")
+    """
+    Creates the full pipeline with Entry Agent as first step.
+    
+    Flow:
+    1. EntryRouter: Classifies intent, sets routing_decision in context
+    2. MarketAnalyst: Checks routing_decision, conditionally analyzes stocks
+    3. NewsAnalyst: Checks if market analysis ran, conditionally searches news
+    4. CIO_Synthesizer: Returns direct_response or synthesizes analysis
+    
+    All agents receive context from previous steps via SequentialAgent.
+    """
+    # 1. Get Data Context String
     context_str = STORE.get_data_context()
     
-    # 2. Market Agent (The Doer)
+    # 2. Entry/Router Agent - First point of contact
+    entry_agent = LlmAgent(
+        name="EntryRouter",
+        model=model,
+        instruction=prompts.ENTRY_ROUTER_PROMPT,
+        output_schema=schemas.EntryRouterOutput,
+        output_key="routing_decision",  # Available to all downstream agents
+        tools=[]  # No tools needed, just intent classification
+    )
+    
+    # 3. Market Agent - Conditionally analyzes based on routing_decision
     market_prompt = prompts.get_market_agent_prompt(context_str)
     market_agent = LlmAgent(
         name="MarketAnalyst",
         model=model,
         instruction=market_prompt,
-        output_schema=schemas.MarketAnalysisOutput,  # Structured JSON output
-        output_key="market_analysis",  # Store in state['market_analysis']
-        # Direct tool access
-        tools=[tools.rank_market_performance, tools.analyze_single_stock, tools.check_data_availability]
+        output_schema=schemas.MarketAnalysisOutput,
+        output_key="market_analysis",
+        tools=[
+            tools.check_data_availability, 
+            tools.get_top_gainers,
+            tools.get_top_losers,
+            tools.analyze_stock
+        ]
     )
 
-    # 3. News Agent (The Context - Sequential)
-    # Runs AFTER Market Agent, sees Market Agent's output in context
+    # 4. News Agent - Conditionally searches based on market_analysis
     news_agent = LlmAgent(
         name="NewsAnalyst",
         model=model,
         instruction=prompts.NEWS_AGENT_PROMPT,
-        # output_schema=schemas.NewsAnalysisOutput,  # Structured JSON output
-        # output_key="news_analysis",  # Store in state['news_analysis']
         tools=[google_search]
     )
 
-    # 4. Merger Agent (The Writer)
+    # 5. Merger Agent - Returns direct_response or synthesizes analysis
     merger_agent = LlmAgent(
         name="CIO_Synthesizer",
         model=model,
         instruction=prompts.MERGER_AGENT_PROMPT
     )
 
-    # 5. Sequential Pipeline (Stable)
-    # Market -> News -> Merger
-    # SequentialAgent doesn't take instructions - it just orchestrates the sub-agents
-    root_agent = SequentialAgent(
-        name="InvestorCopilot",
-        sub_agents=[market_agent, news_agent, merger_agent],
-        description="Sequential workflow: Data Analysis -> News Context -> Investment Report"
+    # 6. Sequential Pipeline - Entry → Market → News → Merger
+    pipeline = SequentialAgent(
+        name="InvestorParadisePipeline",
+        sub_agents=[entry_agent, market_agent, news_agent, merger_agent],
+        description="Intent Classification → Market Analysis → News Context → Final Report"
     )
     
-    return root_agent
+    return pipeline

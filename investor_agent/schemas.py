@@ -4,7 +4,30 @@ Enables reliable data passing between agents in the pipeline.
 """
 
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Literal
+
+
+class EntryRouterOutput(BaseModel):
+    """Output from Entry/Router Agent - decides how to handle the user query."""
+    
+    intent: Literal["greeting", "capability", "stock_analysis", "out_of_scope", "prompt_injection"] = Field(
+        description="Classified intent of user's query"
+    )
+    
+    should_analyze: bool = Field(
+        description="True if query should proceed to stock analysis pipeline, False otherwise"
+    )
+    
+    direct_response: Optional[str] = Field(
+        None,
+        description="Direct response for greetings, capabilities, rejections (when should_analyze=False)"
+    )
+    
+    reasoning: str = Field(
+        description="Brief explanation of why this intent was chosen"
+    )
+
+
 
 
 class StockPerformance(BaseModel):

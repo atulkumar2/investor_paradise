@@ -11,7 +11,7 @@ original_init = httpx.AsyncClient.__init__
 def patched_init(self, *args, **kwargs):
     kwargs['verify'] = False
     original_init(self, *args, **kwargs)
-httpx.AsyncClient._init_ = patched_init
+httpx.AsyncClient.init = patched_init
 # ------------------------------------------
 
 # --- 2. Load Config, logging & Data ---
@@ -31,20 +31,24 @@ from investor_agent.data_engine import STORE
 logger.info("🚀 Initializing Web App Backend...")
 
 # Pre-load Data (Global Scope)
-_ = STORE.df 
-logger.info(f"📅 Database Context: {STORE.get_data_context()}")
+# --- CRITICAL: Pre-load Data (Eager Loading - Option 1) ---
+# This MUST happen before agent creation to ensure:
+# 1. First user query is instant (no 5s CSV load delay)
+# 2. Uses parquet cache if available (13x faster than CSV)
+# 3. ADK web server is ready immediately after startup
+logger.info("📂 Pre-loading NSE stock data...")
+_ = STORE.df  # Force immediate load (triggers cache check or CSV load)
+logger.info(f"✅ Data loaded: {len(STORE.df):,} rows, {STORE.total_symbols:,} symbols")
+logger.info(f"📅 Date range: {STORE.get_data_context()}")
 
-# --- 3. Initialize Objects Globally ---
+# --- 3. Initialize Model and Root Agent ---
 model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY)
+
+# Single root agent - full pipeline with Entry → Market → News → Merger
 root_agent = create_pipeline(model)
-# session_service = InMemorySessionService()
 
-# # --- 4. Define the Runner Variable ---
-# # The ADK Web server looks for this specific object
-# runner = Runner(
-#     agent=pipeline,
-#     app_name="investor_paradise",
-#     session_service=session_service
-# )
+logger.info("✅ Root agent initialized and ready for adk web.")
 
-logger.info("✅ Runner is ready for Web UI.")
+# --- 4. Export for ADK Web Server ---
+# The ADK web command will look for 'root_agent' to instantiate Runner
+# Usage: adk web --agent=investor_agent.agent:root_agent --port=8000
