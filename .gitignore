@@ -1,5 +1,6 @@
 # custom
 /data/
+**/data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -211,7 +212,6 @@ __marimo__/
 
 .github
 .env
-data/
 
 # Logs
 *.log
