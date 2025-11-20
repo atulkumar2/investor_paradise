@@ -28,6 +28,26 @@ Use a custom data directory with `--data`:
 uv run -- python main.py --data /path/to/data "Available dates"
 ```
 
+Alternatively, this project can be run in two equivalent ways:
+
+- Run the CLI directly with `uv` (recommended for quick scripts):
+
+```bash
+uv run cli.py
+# or explicitly run the main module
+uv run -- python main.py "Your question here"
+```
+
+- Run the ADK web UI (starts a local web server and developer console):
+
+```bash
+# activate your virtualenv first (Windows PowerShell)
+.\.venv\Scripts\Activate.ps1
+adk web .
+```
+
+Both approaches use the same agent code and data; choose CLI for quick local queries and `adk web` to use the interactive web UI.
+
 ## Linting/Formatting
 
 Ruff and Black are configured in `pyproject.toml`:
