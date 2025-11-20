@@ -31,7 +31,7 @@ async def main():
     print(f"📅 Database Context: {STORE.get_data_context()}")
 
     # 2. Initialize Model & Pipeline
-    model = Gemini(model="gemini-2.5-flash", api_key=API_KEY)
+    model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY)
     pipeline = create_pipeline(model)
 
     # 3. Setup Runner

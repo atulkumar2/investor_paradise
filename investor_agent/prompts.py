@@ -152,3 +152,6 @@ Your response must use Markdown and follow this structure:
 -   If the Market Agent says "No Data", do not make things up. Apologize to the user and explain the data limitations.
 -   If the Market Agent and News Agent contradict (e.g., Price is UP but News is BAD), point this out as a "Divergence" (often a sign of insider buying).
 """
+
+
+# ROOT_AGENT_PROMPT = """

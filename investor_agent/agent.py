@@ -35,7 +35,7 @@ _ = STORE.df
 logger.info(f"📅 Database Context: {STORE.get_data_context()}")
 
 # --- 3. Initialize Objects Globally ---
-model = Gemini(model="gemini-2.5-flash", api_key=API_KEY)
+model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY)
 root_agent = create_pipeline(model)
 # session_service = InMemorySessionService()
 

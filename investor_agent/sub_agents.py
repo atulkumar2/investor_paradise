@@ -1,5 +1,6 @@
 from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.models.google_llm import Gemini
+from google.adk.tools import google_search
 from investor_agent import prompts
 from investor_agent import tools
 from investor_agent.data_engine import STORE
@@ -15,7 +16,7 @@ def create_pipeline(model: Gemini) -> SequentialAgent:
         model=model,
         instruction=market_prompt,
         # Direct tool access
-        tools=[tools.rank_market_performance, tools.analyze_single_stock]
+        tools=[tools.rank_market_performance, tools.analyze_single_stock, tools.check_data_availability]
     )
 
     # 3. News Agent (The Context - Sequential)
@@ -23,7 +24,8 @@ def create_pipeline(model: Gemini) -> SequentialAgent:
     news_agent = LlmAgent(
         name="NewsAnalyst",
         model=model,
-        instruction=prompts.NEWS_AGENT_PROMPT
+        instruction=prompts.NEWS_AGENT_PROMPT,
+        tools=[google_search]
     )
 
     # 4. Merger Agent (The Writer)
@@ -39,6 +41,7 @@ def create_pipeline(model: Gemini) -> SequentialAgent:
         name="InvestorCopilot",
         sub_agents=[market_agent, news_agent, merger_agent],
         description="Sequential workflow: Data -> Context -> Report"
+        # instructions=prompts.ROOT_AGENT_PROMPT
     )
     
     return root_agent
