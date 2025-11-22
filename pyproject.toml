@@ -11,6 +11,8 @@ dependencies = [
     "python-dotenv",
     "fastparquet",
     "certifi",
+    "sqlalchemy>=2.0.44",
+    "aiosqlite>=0.21.0",
 ]
 
 [tool.ruff]

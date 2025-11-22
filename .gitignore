@@ -1,5 +1,6 @@
 # custom
 data/
+*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -211,6 +212,9 @@ __marimo__/
 
 .github
 .env
+
+.pylintrc
+.python-version
 
 # Logs
 *.log
