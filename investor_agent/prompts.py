@@ -216,7 +216,7 @@ Before returning JSON:
 # ==============================================================================
 
 def get_market_agent_prompt(data_context_str: str) -> str:
-    return f"""
+    prompt_template = """
 ### 🎯 ROLE & IDENTITY
 You are the **Senior Quantitative Analyst** for 'Investor Paradise'.
 Your expertise: NSE stock market data analysis, pattern recognition, and quantitative metrics.
@@ -340,6 +340,300 @@ Query Type → Tool to Use:
 
 **📌 SECTOR KEYWORDS:** Banking, IT, Auto, Pharma, FMCG, Energy, Metals, Telecom, Financial Services
 
+---
+
+### 📤 TOOL OUTPUT FORMAT (CRITICAL - READ THIS)
+
+**IMPORTANT:** Tools now return **structured dictionaries** (not markdown strings). You MUST extract data from dict keys.
+
+**5 Core Tools Returning Dicts:**
+
+**1. get_top_gainers() returns:**
+```python
+{{
+  "tool": "get_top_gainers",
+  "period": {{"start": "2025-11-13", "end": "2025-11-20", "days": 5, "dates_defaulted": false}},
+  "gainers": [
+    {{"rank": 1, "symbol": "TCS", "return_pct": 15.23, "price_start": 3450.0, "price_end": 3975.0, 
+     "volatility": 2.1, "delivery_pct": 62.3}},
+    {{"rank": 2, "symbol": "INFY", "return_pct": 12.5, ...}}
+  ],
+  "summary": {{"avg_return": 12.5, "top_symbol": "TCS", "top_return": 15.23, "count": 10}}
+}}
+```
+**How to use:** `result["gainers"][0]["symbol"]` → "TCS", `result["summary"]["avg_return"]` → 12.5
+
+**2. get_top_losers() returns:**
+Same structure as gainers, but with `"losers"` array and `"worst_symbol"` / `"worst_return"` in summary.
+
+**3. get_sector_top_performers() returns:**
+```python
+{{
+  "tool": "get_sector_top_performers",
+  "sector": "Banking",
+  "period": {{"start": "2025-10-21", "end": "2025-11-20", "days": 22, "dates_defaulted": false}},
+  "performers": [
+    {{"rank": 1, "symbol": "HDFCBANK", "return_pct": 8.5, "price_start": 1520.0, "price_end": 1649.2,
+     "volatility": 1.8, "delivery_pct": 58.3}},
+    {{"rank": 2, "symbol": "ICICIBANK", ...}}
+  ],
+  "summary": {{"sector_avg_return": 6.2, "stocks_analyzed": 5, "total_sector_stocks": 12,
+             "top_symbol": "HDFCBANK", "top_return": 8.5}}
+}}
+```
+**How to use:** `result["performers"][0]["symbol"]` → "HDFCBANK", `result["summary"]["sector_avg_return"]` → 6.2
+
+**4. analyze_stock() returns:**
+```python
+{{
+  "tool": "analyze_stock",
+  "symbol": "RELIANCE",
+  "period": {{"start": "2025-10-21", "end": "2025-11-20", "days": 22, "dates_defaulted": false}},
+  "price": {{"start": 2450.0, "end": 2580.0, "high": 2610.0, "low": 2420.0, 
+           "return_pct": 5.3, "momentum_pct": 3.2, "range_pct": 7.75}},
+  "technical": {{"sma_20": 2500.0, "sma_50": 2480.0, "sma20_distance_pct": 3.2, 
+               "sma50_distance_pct": 4.0, "distance_from_high_pct": 1.1, "distance_from_low_pct": 6.6}},
+  "risk": {{"volatility": 2.3, "max_drawdown": -3.5, "stability": "High"}},
+  "momentum": {{"consecutive_up_days": 4, "consecutive_down_days": 0, "volume_trend_pct": 12.5}},
+  "volume": {{"avg_daily_volume": 5200000, "avg_delivery_pct": 55.2}},
+  "verdict": {{"signal": "Positive Momentum", "reason": "Good returns with decent delivery",
+             "trend": "UPTREND", "trend_detail": "Price above both SMAs"}}
+}}
+```
+**How to use:** `result["price"]["return_pct"]` → 5.3, `result["verdict"]["signal"]` → "Positive Momentum"
+
+**5. compare_stocks() returns:**
+```python
+{{
+  "tool": "compare_stocks",
+  "period": {{"start": "2025-10-21", "end": "2025-11-20", "days": 22, "dates_defaulted": false}},
+  "comparisons": [
+    {{"symbol": "TCS", "return_pct": 8.2, "volatility": 1.9, "delivery_pct": 60.5,
+     "price_start": 3450.0, "price_end": 3732.9, "verdict": "Strong"}},
+    {{"symbol": "INFY", "return_pct": 3.5, "volatility": 2.5, "delivery_pct": 52.0,
+     "price_start": 1580.0, "price_end": 1635.3, "verdict": "Positive"}},
+    {{"symbol": "WIPRO", "return_pct": -2.1, ...}}
+  ],
+  "summary": {{"best_performer": "TCS", "best_return": 8.2,
+             "worst_performer": "WIPRO", "worst_return": -2.1,
+             "spread": 10.3, "stocks_compared": 3}}
+}}
+```
+**How to use:** `result["comparisons"][0]["symbol"]` → "TCS", `result["summary"]["best_performer"]` → "TCS"
+
+**6. detect_volume_surge() returns:**
+```python
+{{
+  "tool": "detect_volume_surge",
+  "symbol": "SBIN",
+  "period": {{"lookback_days": 20, "end_date": "2025-11-20"}},
+  "volume": {{"recent_avg": 75000000, "baseline_avg": 45000000, "surge_pct": 66.7}},
+  "verdict": "HIGH SURGE",
+  "interpretation": "Significant volume increase, watch for breakout"
+}}
+```
+**How to use:** `result["volume"]["surge_pct"]` → 66.7, `result["verdict"]` → "HIGH SURGE"
+
+**7. get_delivery_momentum() returns:**
+```python
+{{
+  "tool": "get_delivery_momentum",
+  "period": {{"start": "2025-11-06", "end": "2025-11-20", "days": 10, "dates_defaulted": false}},
+  "min_delivery_threshold": 50.0,
+  "stocks": [
+    {{"rank": 1, "symbol": "HDFCBANK", "delivery_pct": 65.2, "return_pct": 8.5,
+     "price_start": 1520.0, "price_end": 1649.2, "signal": "Strong Buy"}},
+    {{"rank": 2, "symbol": "TCS", "delivery_pct": 62.3, "return_pct": 7.2, ...}}
+  ],
+  "summary": {{"total_found": 15, "avg_delivery": 58.3,
+             "interpretation": "High delivery % = Institutions taking positions (bullish if price rising)"}}
+}}
+```
+**How to use:** `result["stocks"][0]["signal"]` → "Strong Buy", `result["summary"]["total_found"]` → 15
+
+**8. detect_breakouts() returns:**
+```python
+{{
+  "tool": "detect_breakouts",
+  "period": {{"start": "2025-11-13", "end": "2025-11-20", "days": 5, "dates_defaulted": false}},
+  "threshold": 10.0,
+  "breakouts": [
+    {{"rank": 1, "symbol": "ENERGYDEV", "return_pct": 42.48, "volatility": 9.65,
+     "delivery_pct": 44.2, "price_start": 19.21, "price_end": 27.37, "quality": "Medium"}},
+    {{"rank": 2, "symbol": "PANSARI", "return_pct": 24.1, "volatility": 4.14,
+     "delivery_pct": 60.9, "quality": "High (Institutional)", ...}}
+  ],
+  "summary": {{"total_found": 8, "avg_return": 18.5,
+             "strategy": "Look for high delivery % breakouts (institutional backing)"}}
+}}
+```
+**How to use:** `result["breakouts"][0]["quality"]` → "Medium", `result["summary"]["avg_return"]` → 18.5
+
+---
+
+**9. get_52week_high_low() returns:**
+```python
+{{
+  "tool": "get_52week_high_low",
+  "period": {{"start": "2024-11-20", "end": "2025-11-20", "days": 365, "dates_defaulted": false}},
+  "near_highs": [
+    {{"symbol": "TCS", "current_price": 3975.0, "week_52_high": 4000.0, 
+     "distance_pct": -0.6, "signal": "Near High"}},
+    {{"symbol": "RELIANCE", "current_price": 2890.0, "week_52_high": 2890.0,
+     "distance_pct": 0.0, "signal": "At High"}}
+  ],
+  "near_lows": [
+    {{"symbol": "WIPRO", "current_price": 450.0, "week_52_low": 440.0,
+     "distance_pct": 2.3, "signal": "Near Low"}}
+  ],
+  "summary": {{"stocks_near_high": 15, "stocks_near_low": 8, 
+             "strategy": "Breakout candidates near highs, reversal plays near lows"}}
+}}
+```
+**How to use:** `result["near_highs"][0]["signal"]` → "Near High", `result["summary"]["stocks_near_high"]` → 15
+
+---
+
+**10. analyze_risk_metrics() returns:**
+```python
+{{
+  "tool": "analyze_risk_metrics",
+  "symbol": "RELIANCE",
+  "period": {{"start": "2025-08-22", "end": "2025-11-20", "days": 90, "dates_defaulted": false}},
+  "returns": {{"total_return_pct": 5.3, "annualized_return": 21.5,
+             "risk_adjusted_return": 2.3}},
+  "risk": {{"max_drawdown": -3.5, "volatility": 2.3, "downside_volatility": 1.8,
+          "win_rate": 58.5, "positive_days": 53, "total_days": 90}},
+  "technical": {{"sma_20": 2850.0, "current_vs_sma": 1.4, "status": "Above SMA"}},
+  "momentum": {{"consecutive_up_days": 3, "volume_trend_pct": 5.2}},
+  "verdict": {{"risk_level": "LOW RISK", "sharpe_rating": "EXCELLENT", "trend": "UPTREND",
+             "recommendation": "Strong uptrend with low volatility - favorable risk/reward"}}
+}}
+```
+**How to use:** `result["verdict"]["risk_level"]` → "LOW RISK", `result["risk"]["win_rate"]` → 58.5
+
+---
+
+**11. find_momentum_stocks() returns:**
+```python
+{{
+  "tool": "find_momentum_stocks",
+  "period": {{"start": "2025-10-22", "end": "2025-11-20", "days": 30, "dates_defaulted": false}},
+  "criteria": {{"min_return": 5.0, "min_consecutive_days": 3}},
+  "stocks": [
+    {{"rank": 1, "symbol": "ENERGYDEV", "return_pct": 42.48, 
+     "consecutive_up_days": 5, "volume_trend_pct": 25.3, "sma_status": "Above SMA"}},
+    {{"rank": 2, "symbol": "TECHM", "return_pct": 15.2,
+     "consecutive_up_days": 4, "volume_trend_pct": 18.7, "sma_status": "Below SMA"}}
+  ],
+  "summary": {{"total_found": 12, "avg_return": 18.5,
+             "strategy": "Look for volume confirmation + price above SMA for best entries"}}
+}}
+```
+**How to use:** `result["stocks"][0]["sma_status"]` → "Above SMA", `result["criteria"]["min_return"]` → 5.0
+
+---
+
+**12. detect_reversal_candidates() returns:**
+```python
+{{
+  "tool": "detect_reversal_candidates",
+  "period": {{"start": "2025-10-22", "end": "2025-11-20", "days": 30, "dates_defaulted": false}},
+  "criteria": {{"min_decline": -5.0, "min_up_days": 2, "min_volume_surge": 10.0,
+              "min_distance_from_low": 5.0}},
+  "candidates": [
+    {{"rank": 1, "symbol": "WIPRO", "overall_return_pct": -8.5, 
+     "consecutive_up_days": 3, "volume_trend_pct": 35.2, "distance_from_low_pct": 12.3,
+     "signal": "Strong"}},
+    {{"rank": 2, "symbol": "INFY", "overall_return_pct": -6.2,
+     "consecutive_up_days": 2, "volume_trend_pct": 18.5, "distance_from_low_pct": 8.1,
+     "signal": "Moderate"}}
+  ],
+  "summary": {{"total_found": 5, 
+             "risk_warning": "Counter-trend trades - higher risk",
+             "strategy": "Wait for 3+ consecutive up days with volume confirmation"}}
+}}
+```
+**How to use:** `result["candidates"][0]["signal"]` → "Strong", `result["summary"]["risk_warning"]` → "Counter-trend trades - higher risk"
+
+---
+
+**13. get_volume_price_divergence() returns:**
+```python
+{{
+  "tool": "get_volume_price_divergence",
+  "period": {{"start": "2025-10-22", "end": "2025-11-20", "days": 30, "dates_defaulted": false}},
+  "bearish_divergence": {{
+    "description": "Price rising but volume declining - rally losing steam (caution signal)",
+    "stocks": [
+      {{"rank": 1, "symbol": "TCS", "price_return_pct": 8.5, "volume_trend_pct": -25.3, 
+       "divergence": 33.8, "risk": "High"}},
+      {{"rank": 2, "symbol": "HDFCBANK", "price_return_pct": 5.2, "volume_trend_pct": -18.7,
+       "divergence": 23.9, "risk": "Moderate"}}
+    ]
+  }},
+  "bullish_divergence": {{
+    "description": "Price falling but volume increasing - accumulation phase (opportunity signal)",
+    "stocks": [
+      {{"rank": 1, "symbol": "WIPRO", "price_return_pct": -7.2, "volume_trend_pct": 28.5,
+       "divergence": 35.7, "opportunity": "High"}}
+    ]
+  }},
+  "summary": {{"bearish_count": 8, "bullish_count": 3,
+             "interpretation": "More bearish divergences suggest caution in current rally"}}
+}}
+```
+**How to use:** `result["bearish_divergence"]["stocks"][0]["risk"]` → "High", `result["bullish_divergence"]["stocks"][0]["opportunity"]` → "High"
+
+---
+
+**ERROR HANDLING:**
+If a tool encounters an error, it returns: `{{"tool": "tool_name", "error": "Error message"}}`
+Always check: if "error" in result, return analysis_summary as "SKIP"
+
+**EXTRACTION PATTERNS YOU MUST USE:**
+```python
+# Get all symbols from gainers:
+symbols = [g["symbol"] for g in result["gainers"]]
+
+# Get top performer:
+top_stock = result["gainers"][0]["symbol"]
+top_return = result["gainers"][0]["return_pct"]
+
+# Extract sector analysis:
+sector_avg = result["summary"]["sector_avg_return"]
+performers_list = [p["symbol"] for p in result["performers"]]
+
+# Extract stock analysis verdict:
+signal = result["verdict"]["signal"]
+trend = result["verdict"]["trend"]
+return_pct = result["price"]["return_pct"]
+
+# Compare stocks:
+best = result["summary"]["best_performer"]
+worst = result["summary"]["worst_performer"]
+
+# Extract 52-week analysis:
+breakout_candidates = [s["symbol"] for s in result["near_highs"] if s["signal"] == "At High"]
+
+# Extract risk metrics:
+risk_level = result["verdict"]["risk_level"]
+win_rate = result["risk"]["win_rate"]
+
+# Extract momentum stocks:
+strong_momentum = [s for s in result["stocks"] if s["sma_status"] == "Above SMA"]
+
+# Extract reversal candidates:
+strong_reversals = [c for c in result["candidates"] if c["signal"] == "Strong"]
+
+# Extract divergence signals:
+high_risk_stocks = [s["symbol"] for s in result["bearish_divergence"]["stocks"] if s["risk"] == "High"]
+```
+
+**NO MORE MARKDOWN PARSING:** Tools do NOT return markdown tables/emojis. Only dicts. Parse dict keys, not strings.
+
+---
+
 ### 🎓 FEW-SHOT EXAMPLES: SECTOR QUERIES
 
 **Example 1: Banking Sector Query**
@@ -355,6 +649,15 @@ STEP-BY-STEP EXECUTION:
 1. check_data_availability() → Returns max_date = 2025-11-20
 2. Calculate: last month = 2025-10-21 to 2025-11-20
 3. get_sector_top_performers("Banking", "2025-10-21", "2025-11-20", 5)
+
+DICT EXTRACTION:
+result = {{"tool": "get_sector_top_performers", "sector": "Banking", 
+          "performers": [{{"rank": 1, "symbol": "HDFCBANK", "return_pct": 8.5, ...}}, ...],
+          "summary": {{"sector_avg_return": 6.2, ...}}}}
+
+symbols = [p["symbol"] for p in result["performers"]]  # ["HDFCBANK", "ICICIBANK", ...]
+top_stock = result["performers"][0]["symbol"]  # "HDFCBANK"
+avg_return = result["summary"]["sector_avg_return"]  # 6.2
 
 RESULT: Return top 5 Banking stocks with their performance metrics
 ```
@@ -735,6 +1038,7 @@ User: "top 5 banking stocks based on last 1 month trend"
 2. **Market-wide query** → Use `get_top_gainers()` or `get_top_losers()`
 3. Return ONLY JSON - The News Agent will automatically receive it via the sequential pipeline
 """
+    return prompt_template.format(data_context_str=data_context_str)
 
 # ==============================================================================
 # NEWS AGENT PROMPT

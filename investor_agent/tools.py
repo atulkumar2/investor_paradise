@@ -97,7 +97,7 @@ For 'latest week', use the 7 days ending on {NSESTORE.max_date}."""
     return "⚠️ No data currently loaded."
 
 
-def get_top_gainers(start_date: str = None, end_date: str = None, top_n: int = 10) -> str:
+def get_top_gainers(start_date: Optional[str] = None, end_date: Optional[str] = None, top_n: int = 10) -> dict:
     """
     Get top performing stocks by percentage return over a period.
     
@@ -107,7 +107,7 @@ def get_top_gainers(start_date: str = None, end_date: str = None, top_n: int = 1
         top_n: Number of top stocks to return (default 10)
     
     Returns:
-        Formatted table of top gainers with returns, prices, and delivery %
+        Dictionary with period info, top gainers list, and summary statistics
     
     If dates are not provided, defaults to the last 7 days of available data.
     """
@@ -116,44 +116,58 @@ def get_top_gainers(start_date: str = None, end_date: str = None, top_n: int = 1
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    note = ""
+    dates_defaulted = False
     
     # Default to last 7 days if no dates provided
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=7)
-            note = f"⚠️ No dates specified. Using last 7 days: {s_date} to {e_date}\n\n"
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"error": "No data available", "gainers": [], "period": {}}
     
     # Get ranked stocks
     ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=top_n, metric="return")
     
     if ranked.empty:
-        return f"❌ No data found between {s_date} and {e_date}"
+        return {
+            "error": f"No data found between {s_date} and {e_date}",
+            "gainers": [],
+            "period": {"start": str(s_date), "end": str(e_date)}
+        }
     
-    # Format output
-    output = f"{note}### 📈 Top {top_n} Gainers ({s_date} to {e_date})\n\n"
-    output += "| Rank | Symbol | Return % | Start → End Price | Volatility | Avg Delivery % |\n"
-    output += "|------|--------|----------|-------------------|------------|----------------|\n"
-    
-    for idx, row in ranked.iterrows():
-        output += (f"| {idx+1:2d}   | {row['symbol']:12s} | "
-                  f"{row['return_pct']:+7.2f}% | "
-                  f"₹{row['start_price']:8.2f} → ₹{row['end_price']:8.2f} | "
-                  f"{row['volatility']:5.2f}% | "
-                  f"{row['avg_delivery_pct']:5.1f}% |\n")
-    
-    # Add summary insights
-    avg_return = ranked['return_pct'].mean()
-    output += f"\n**Average Return:** {avg_return:+.2f}%\n"
-    output += f"**Period:** {ranked.iloc[0]['days_count']} trading days\n"
-    
-    return output
+    # Build structured output
+    return {
+        "tool": "get_top_gainers",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(ranked.iloc[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "gainers": [
+            {
+                "rank": idx + 1,
+                "symbol": row['symbol'],
+                "return_pct": round(float(row['return_pct']), 2),
+                "price_start": round(float(row['start_price']), 2),
+                "price_end": round(float(row['end_price']), 2),
+                "volatility": round(float(row['volatility']), 2),
+                "delivery_pct": round(float(row['avg_delivery_pct']), 1) if row['avg_delivery_pct'] else None
+            }
+            for idx, row in ranked.iterrows()
+        ],
+        "summary": {
+            "avg_return": round(float(ranked['return_pct'].mean()), 2),
+            "top_symbol": ranked.iloc[0]['symbol'],
+            "top_return": round(float(ranked.iloc[0]['return_pct']), 2),
+            "count": len(ranked)
+        }
+    }
 
 
-def get_top_losers(start_date: str = None, end_date: str = None, top_n: int = 10) -> str:
+def get_top_losers(start_date: Optional[str] = None, end_date: Optional[str] = None, top_n: int = 10) -> dict:
     """
     Get worst performing stocks by percentage return over a period.
     
@@ -163,7 +177,7 @@ def get_top_losers(start_date: str = None, end_date: str = None, top_n: int = 10
         top_n: Number of bottom stocks to return (default 10)
     
     Returns:
-        Formatted table of top losers with returns, prices, and delivery %
+        Dictionary with period info, top losers list, and summary statistics
     
     If dates are not provided, defaults to the last 7 days of available data.
     """
@@ -172,52 +186,65 @@ def get_top_losers(start_date: str = None, end_date: str = None, top_n: int = 10
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    note = ""
+    dates_defaulted = False
     
     # Default to last 7 days if no dates provided
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=7)
-            note = f"⚠️ No dates specified. Using last 7 days: {s_date} to {e_date}\n\n"
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"error": "No data available", "losers": [], "period": {}}
     
     # Get all ranked stocks and take bottom N
     all_ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=1000, metric="return")
     
     if all_ranked.empty:
-        return f"❌ No data found between {s_date} and {e_date}"
+        return {
+            "error": f"No data found between {s_date} and {e_date}",
+            "losers": [],
+            "period": {"start": str(s_date), "end": str(e_date)}
+        }
     
     # Get bottom performers
     losers = all_ranked.tail(top_n).sort_values("return_pct")
     
-    # Format output
-    output = f"{note}### 📉 Top {top_n} Losers ({s_date} to {e_date})\n\n"
-    output += "| Rank | Symbol | Return % | Start → End Price | Volatility | Avg Delivery % |\n"
-    output += "|------|--------|----------|-------------------|------------|----------------|\n"
-    
-    for idx, row in losers.iterrows():
-        output += (f"| {idx+1:2d}   | {row['symbol']:12s} | "
-                  f"{row['return_pct']:+7.2f}% | "
-                  f"₹{row['start_price']:8.2f} → ₹{row['end_price']:8.2f} | "
-                  f"{row['volatility']:5.2f}% | "
-                  f"{row['avg_delivery_pct']:5.1f}% |\n")
-    
-    # Add summary insights
-    avg_return = losers['return_pct'].mean()
-    output += f"\n**Average Return:** {avg_return:+.2f}%\n"
-    output += f"**Period:** {losers.iloc[0]['days_count']} trading days\n"
-    
-    return output
+    return {
+        "tool": "get_top_losers",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(losers.iloc[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "losers": [
+            {
+                "rank": idx + 1,
+                "symbol": row['symbol'],
+                "return_pct": round(float(row['return_pct']), 2),
+                "price_start": round(float(row['start_price']), 2),
+                "price_end": round(float(row['end_price']), 2),
+                "volatility": round(float(row['volatility']), 2),
+                "delivery_pct": round(float(row['avg_delivery_pct']), 1) if row['avg_delivery_pct'] else None
+            }
+            for idx, row in losers.iterrows()
+        ],
+        "summary": {
+            "avg_return": round(float(losers['return_pct'].mean()), 2),
+            "worst_symbol": losers.iloc[0]['symbol'],
+            "worst_return": round(float(losers.iloc[0]['return_pct']), 2),
+            "count": len(losers)
+        }
+    }
 
 
 def get_sector_top_performers(
     sector: str, 
-    start_date: str = None, 
-    end_date: str = None, 
+    start_date: Optional[str] = None, 
+    end_date: Optional[str] = None, 
     top_n: int = 5
-) -> str:
+) -> dict:
     """
     Get top performing stocks from a specific sector.
     
@@ -229,7 +256,7 @@ def get_sector_top_performers(
         top_n: Number of top stocks to return (default 5)
     
     Returns:
-        Formatted table of top performers in the sector
+        Dictionary with sector performers, period info, and summary statistics
     
     Available sectors: Banking, IT, Auto, Pharma, FMCG, Energy, Metals, 
                       Telecom, Financial Services
@@ -239,21 +266,23 @@ def get_sector_top_performers(
     
     if not sector_stocks:
         available_sectors = sorted(set(SECTOR_MAP.values()))
-        return f"❌ Sector '{sector}' not found. Available sectors: {', '.join(available_sectors)}"
+        return {
+            "tool": "get_sector_top_performers",
+            "error": f"Sector '{sector}' not found. Available: {', '.join(available_sectors)}"
+        }
     
     _ = NSESTORE.df
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    # Default to last 30 days
-    note = ""
+    dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=30)
-            note = f"⚠️ No dates specified. Using last 30 days: {s_date} to {e_date}\n\n"
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"tool": "get_sector_top_performers", "error": "No data available"}
     
     # Analyze each stock in the sector
     from investor_agent.data_engine import MetricsEngine
@@ -268,33 +297,47 @@ def get_sector_top_performers(
                 results.append(stats)
     
     if not results:
-        return f"❌ No data found for {sector} stocks between {s_date} and {e_date}"
+        return {
+            "tool": "get_sector_top_performers",
+            "error": f"No data found for {sector} stocks between {s_date} and {e_date}"
+        }
     
     # Sort by return percentage
     results.sort(key=lambda x: x['return_pct'], reverse=True)
     results = results[:top_n]
     
-    # Format output
-    output = f"{note}### 🏆 Top {top_n} {sector} Stocks ({s_date} to {e_date})\n\n"
-    output += "| Rank | Symbol | Return % | Start → End Price | Volatility | Avg Delivery % |\n"
-    output += "|------|--------|----------|-------------------|------------|----------------|\n"
-    
-    for idx, stats in enumerate(results, 1):
-        output += (f"| {idx:2d}   | {stats['symbol']:12s} | "
-                  f"{stats['return_pct']:+7.2f}% | "
-                  f"₹{stats['start_price']:8.2f} → ₹{stats['end_price']:8.2f} | "
-                  f"{stats['volatility']:5.2f}% | "
-                  f"{stats['avg_delivery_pct']:5.1f}% |\n")
-    
-    avg_return = sum(s['return_pct'] for s in results) / len(results)
-    output += f"\n**Sector Average Return:** {avg_return:+.2f}%\n"
-    output += f"**Stocks Analyzed:** {len(results)}/{len(sector_stocks)}\n"
-    output += f"**Period:** {results[0]['days_count']} trading days\n"
-    
-    return output
+    return {
+        "tool": "get_sector_top_performers",
+        "sector": sector,
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "performers": [
+            {
+                "rank": idx + 1,
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2),
+                "price_start": round(float(stats['start_price']), 2),
+                "price_end": round(float(stats['end_price']), 2),
+                "volatility": round(float(stats['volatility']), 2),
+                "delivery_pct": round(float(stats['avg_delivery_pct']), 1) if stats['avg_delivery_pct'] else None
+            }
+            for idx, stats in enumerate(results)
+        ],
+        "summary": {
+            "sector_avg_return": round(sum(s['return_pct'] for s in results) / len(results), 2),
+            "stocks_analyzed": len(results),
+            "total_sector_stocks": len(sector_stocks),
+            "top_symbol": results[0]['symbol'],
+            "top_return": round(float(results[0]['return_pct']), 2)
+        }
+    }
 
 
-def analyze_stock(symbol: str, start_date: str = None, end_date: str = None) -> str:
+def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
     """
     Comprehensive analysis of a single stock over a period.
     
@@ -304,7 +347,7 @@ def analyze_stock(symbol: str, start_date: str = None, end_date: str = None) -> 
         end_date: Optional end date in YYYY-MM-DD format
     
     Returns:
-        Detailed analysis including returns, volatility, delivery patterns, and verdict
+        Dictionary with comprehensive stock analysis including price, technical, risk, and momentum metrics
     
     If dates not provided, analyzes the last 30 days of available data.
     """
@@ -313,95 +356,121 @@ def analyze_stock(symbol: str, start_date: str = None, end_date: str = None) -> 
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    # Default to last 30 days
+    dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=30)
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"tool": "analyze_stock", "error": "No data available"}
     
     # Get stock data
     stock_df = NSESTORE.get_stock_data(symbol.upper(), s_date, e_date)
     
     if stock_df.empty:
-        return f"❌ No data found for {symbol.upper()} between {s_date} and {e_date}"
+        return {
+            "tool": "analyze_stock",
+            "error": f"No data found for {symbol.upper()} between {s_date} and {e_date}"
+        }
     
     # Calculate metrics
     from investor_agent.data_engine import MetricsEngine
     stats = MetricsEngine.calculate_period_stats(stock_df)
     
     if not stats:
-        return f"❌ Insufficient data to analyze {symbol.upper()}"
+        return {"tool": "analyze_stock", "error": f"Insufficient data to analyze {symbol.upper()}"}
     
-    # Build analysis report
-    output = f"""### 📊 Analysis: {symbol.upper()}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**Period:** {stats['start_date']} to {stats['end_date']} ({stats['days_count']} days)
-
-**Price Performance:**
-- Starting Price: ₹{stats['start_price']:.2f}
-- Ending Price: ₹{stats['end_price']:.2f}
-- Return: {stats['return_pct']:+.2f}%
-- Momentum: {stats['momentum_pct']:+.2f}%
-- High: ₹{stats['period_high']:.2f}
-- Low: ₹{stats['period_low']:.2f}
-- Range: {((stats['period_high'] - stats['period_low']) / stats['start_price'] * 100):.2f}%
-
-**Technical Levels:**
-- 20-Day SMA: ₹{stats['sma_20']:.2f} ({((stats['end_price']/stats['sma_20']-1)*100):+.1f}%)
-- 50-Day SMA: ₹{stats['sma_50']:.2f} ({((stats['end_price']/stats['sma_50']-1)*100):+.1f}%)
-- Distance from High: {stats['distance_from_high_pct']:.1f}%
-- Distance from Low: {stats['distance_from_low_pct']:+.1f}%
-
-**Risk Metrics:**
-- Volatility: {stats['volatility']:.2f}%
-- Max Drawdown: {stats['max_drawdown']:.2f}%
-- Price Stability: {'High' if stats['volatility'] < 2 else 'Moderate' if stats['volatility'] < 5 else 'Low'}
-
-**Momentum Indicators:**
-- Consecutive Up Days: {stats['consecutive_ups']}
-- Consecutive Down Days: {stats['consecutive_downs']}
-- Volume Trend: {stats['volume_trend_pct']:+.1f}%
-
-**Volume & Delivery:**
-- Avg Daily Volume: {stats['avg_volume']:,} shares
-- Avg Delivery %: {stats['avg_delivery_pct']:.1f}%
-"""
+    # Calculate additional metrics
+    price_range_pct = ((stats['period_high'] - stats['period_low']) / stats['start_price'] * 100)
+    sma20_distance = ((stats['end_price'] / stats['sma_20'] - 1) * 100) if stats['sma_20'] > 0 else 0
+    sma50_distance = ((stats['end_price'] / stats['sma_50'] - 1) * 100) if stats['sma_50'] > 0 else 0
     
-    # Add verdict based on patterns
-    output += "\n**Investment Verdict:**\n"
+    # Determine verdict
+    verdict = "Neutral"
+    verdict_reason = "Sideways movement, wait for clear trend"
     
     if stats['return_pct'] > 5 and stats['avg_delivery_pct'] > 60:
-        output += "🟢 **Strong Accumulation** - High returns with high delivery suggests institutional buying\n"
+        verdict = "Strong Accumulation"
+        verdict_reason = "High returns with high delivery suggests institutional buying"
     elif stats['return_pct'] > 3 and stats['avg_delivery_pct'] > 50:
-        output += "🟢 **Positive Momentum** - Good returns with decent delivery\n"
+        verdict = "Positive Momentum"
+        verdict_reason = "Good returns with decent delivery"
     elif stats['return_pct'] < -5 and stats['avg_delivery_pct'] > 60:
-        output += "🔴 **Distribution Pattern** - Falling price with high delivery suggests selling pressure\n"
+        verdict = "Distribution Pattern"
+        verdict_reason = "Falling price with high delivery suggests selling pressure"
     elif stats['return_pct'] < -3:
-        output += "🔴 **Weakness** - Negative returns, proceed with caution\n"
+        verdict = "Weakness"
+        verdict_reason = "Negative returns, proceed with caution"
     elif stats['volatility'] > 10:
-        output += "🟡 **High Volatility** - Significant price swings, suitable for traders not investors\n"
-    else:
-        output += "🟡 **Neutral/Consolidation** - No clear trend, wait for better signals\n"
+        verdict = "High Volatility"
+        verdict_reason = "Significant price swings, suitable for traders not investors"
     
-    # Add trend analysis
+    # Determine trend
     if stats['end_price'] > stats['sma_20'] > stats['sma_50']:
-        output += "📈 **Trend:** UPTREND - Price above both SMAs\n"
+        trend = "UPTREND"
+        trend_detail = "Price above both SMAs"
     elif stats['end_price'] < stats['sma_20'] < stats['sma_50']:
-        output += "📉 **Trend:** DOWNTREND - Price below both SMAs\n"
+        trend = "DOWNTREND"
+        trend_detail = "Price below both SMAs"
     else:
-        output += "➡️ **Trend:** SIDEWAYS - Mixed signals\n"
+        trend = "SIDEWAYS"
+        trend_detail = "Mixed signals"
     
-    return output
+    return {
+        "tool": "analyze_stock",
+        "symbol": symbol.upper(),
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(stats['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "price": {
+            "start": round(float(stats['start_price']), 2),
+            "end": round(float(stats['end_price']), 2),
+            "high": round(float(stats['period_high']), 2),
+            "low": round(float(stats['period_low']), 2),
+            "return_pct": round(float(stats['return_pct']), 2),
+            "momentum_pct": round(float(stats['momentum_pct']), 2),
+            "range_pct": round(float(price_range_pct), 2)
+        },
+        "technical": {
+            "sma_20": round(float(stats['sma_20']), 2),
+            "sma_50": round(float(stats['sma_50']), 2),
+            "sma20_distance_pct": round(float(sma20_distance), 1),
+            "sma50_distance_pct": round(float(sma50_distance), 1),
+            "distance_from_high_pct": round(float(stats['distance_from_high_pct']), 1),
+            "distance_from_low_pct": round(float(stats['distance_from_low_pct']), 1)
+        },
+        "risk": {
+            "volatility": round(float(stats['volatility']), 2),
+            "max_drawdown": round(float(stats['max_drawdown']), 2),
+            "stability": "High" if stats['volatility'] < 2 else "Moderate" if stats['volatility'] < 5 else "Low"
+        },
+        "momentum": {
+            "consecutive_up_days": int(stats['consecutive_ups']),
+            "consecutive_down_days": int(stats['consecutive_downs']),
+            "volume_trend_pct": round(float(stats['volume_trend_pct']), 1)
+        },
+        "volume": {
+            "avg_daily_volume": int(stats['avg_volume']),
+            "avg_delivery_pct": round(float(stats['avg_delivery_pct']), 1)
+        },
+        "verdict": {
+            "signal": verdict,
+            "reason": verdict_reason,
+            "trend": trend,
+            "trend_detail": trend_detail
+        }
+    }
 
 
 # ==============================================================================
 # PHASE 2: ADVANCED ANALYSIS TOOLS
 # ==============================================================================
 
-def detect_volume_surge(symbol: str, lookback_days: int = 20) -> str:
+def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
     """
     Detect unusual volume activity by comparing recent volume to historical average.
     
@@ -410,13 +479,13 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> str:
         lookback_days: Number of days to use for average calculation (default 20)
     
     Returns:
-        Analysis showing if current volume is significantly higher than average
+        Dictionary with volume analysis showing if current volume is significantly higher than average
         (indicates potential breakout, news event, or institutional activity)
     """
     _ = NSESTORE.df
     
     if not NSESTORE.max_date:
-        return "❌ No data available."
+        return {"tool": "detect_volume_surge", "error": "No data available"}
     
     end_date = NSESTORE.max_date
     start_date = end_date - timedelta(days=lookback_days + 5)  # Extra buffer
@@ -424,7 +493,10 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> str:
     stock_df = NSESTORE.get_stock_data(symbol.upper(), start_date, end_date)
     
     if stock_df.empty or len(stock_df) < 5:
-        return f"❌ Insufficient data for {symbol.upper()}"
+        return {
+            "tool": "detect_volume_surge",
+            "error": f"Insufficient data for {symbol.upper()}"
+        }
     
     # Get recent volume (last 3 days avg)
     recent_vol = stock_df.tail(3)['VOLUME'].mean()
@@ -433,38 +505,48 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> str:
     baseline_vol = stock_df.iloc[:-3]['VOLUME'].mean()
     
     if baseline_vol == 0:
-        return f"❌ Invalid volume data for {symbol.upper()}"
+        return {
+            "tool": "detect_volume_surge",
+            "error": f"Invalid volume data for {symbol.upper()}"
+        }
     
     surge_pct = ((recent_vol - baseline_vol) / baseline_vol) * 100
     
-    output = f"""### 📊 Volume Analysis: {symbol.upper()}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**Period:** Last {lookback_days} days ending {end_date}
-
-**Volume Metrics:**
-- Recent Avg (3 days): {recent_vol:,.0f} shares
-- Baseline Avg ({lookback_days} days): {baseline_vol:,.0f} shares
-- Surge: {surge_pct:+.1f}%
-
-**Verdict:**
-"""
-    
+    # Determine verdict
     if surge_pct > 100:
-        output += "🔥 **EXTREME SURGE** - Volume doubled! Possible news/event catalyst\n"
+        verdict = "EXTREME SURGE"
+        interpretation = "Volume doubled! Possible news/event catalyst"
     elif surge_pct > 50:
-        output += "⚡ **HIGH SURGE** - Significant volume increase, watch for breakout\n"
+        verdict = "HIGH SURGE"
+        interpretation = "Significant volume increase, watch for breakout"
     elif surge_pct > 20:
-        output += "🟢 **MODERATE SURGE** - Above-average interest\n"
+        verdict = "MODERATE SURGE"
+        interpretation = "Above-average interest"
     elif surge_pct < -20:
-        output += "🔵 **LOW VOLUME** - Below average, consolidation or lack of interest\n"
+        verdict = "LOW VOLUME"
+        interpretation = "Below average, consolidation or lack of interest"
     else:
-        output += "🟡 **NORMAL** - Volume within typical range\n"
+        verdict = "NORMAL"
+        interpretation = "Volume within typical range"
     
-    return output
+    return {
+        "tool": "detect_volume_surge",
+        "symbol": symbol.upper(),
+        "period": {
+            "lookback_days": lookback_days,
+            "end_date": str(end_date)
+        },
+        "volume": {
+            "recent_avg": int(recent_vol),
+            "baseline_avg": int(baseline_vol),
+            "surge_pct": round(float(surge_pct), 1)
+        },
+        "verdict": verdict,
+        "interpretation": interpretation
+    }
 
 
-def compare_stocks(symbols: list, start_date: str = None, end_date: str = None) -> str:
+def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
     """
     Side-by-side comparison of multiple stocks over the same period.
     
@@ -474,7 +556,7 @@ def compare_stocks(symbols: list, start_date: str = None, end_date: str = None) 
         end_date: Optional end date in YYYY-MM-DD format
     
     Returns:
-        Comparative table showing relative performance
+        Dictionary with comparative analysis of all stocks
         
     If dates not provided, uses last 30 days.
     """
@@ -483,13 +565,14 @@ def compare_stocks(symbols: list, start_date: str = None, end_date: str = None) 
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    # Default to last 30 days
+    dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=30)
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"tool": "compare_stocks", "error": "No data available"}
     
     from investor_agent.data_engine import MetricsEngine
     
@@ -503,42 +586,58 @@ def compare_stocks(symbols: list, start_date: str = None, end_date: str = None) 
                 results.append(stats)
     
     if not results:
-        return f"❌ No data found for any symbols between {s_date} and {e_date}"
+        return {
+            "tool": "compare_stocks",
+            "error": f"No data found for any symbols between {s_date} and {e_date}"
+        }
     
-    # Format comparative table
-    output = f"""### 🔄 Stock Comparison ({s_date} to {e_date})
-
-| Symbol | Return % | Volatility | Delivery % | Start Price | End Price | Verdict |
-|--------|----------|------------|------------|-------------|-----------|---------|
-"""
-    
+    # Determine verdict for each stock
+    comparisons = []
     for stats in results:
-        # Simple verdict
         if stats['return_pct'] > 5:
-            verdict = "🟢 Strong"
+            verdict = "Strong"
         elif stats['return_pct'] > 0:
-            verdict = "🟢 Positive"
+            verdict = "Positive"
         elif stats['return_pct'] > -5:
-            verdict = "🟡 Weak"
+            verdict = "Weak"
         else:
-            verdict = "🔴 Poor"
+            verdict = "Poor"
         
-        output += (f"| {stats['symbol']:10s} | {stats['return_pct']:+7.2f}% | "
-                  f"{stats['volatility']:5.2f}% | {stats['avg_delivery_pct']:5.1f}% | "
-                  f"₹{stats['start_price']:7.2f} | ₹{stats['end_price']:7.2f} | {verdict} |\n")
+        comparisons.append({
+            "symbol": stats['symbol'],
+            "return_pct": round(float(stats['return_pct']), 2),
+            "volatility": round(float(stats['volatility']), 2),
+            "delivery_pct": round(float(stats['avg_delivery_pct']), 1),
+            "price_start": round(float(stats['start_price']), 2),
+            "price_end": round(float(stats['end_price']), 2),
+            "verdict": verdict
+        })
     
-    # Add insights
+    # Find best and worst performers
     best = max(results, key=lambda x: x['return_pct'])
     worst = min(results, key=lambda x: x['return_pct'])
     
-    output += f"\n**Best Performer:** {best['symbol']} ({best['return_pct']:+.2f}%)\n"
-    output += f"**Worst Performer:** {worst['symbol']} ({worst['return_pct']:+.2f}%)\n"
-    output += f"**Spread:** {best['return_pct'] - worst['return_pct']:.2f}%\n"
-    
-    return output
+    return {
+        "tool": "compare_stocks",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "comparisons": comparisons,
+        "summary": {
+            "best_performer": best['symbol'],
+            "best_return": round(float(best['return_pct']), 2),
+            "worst_performer": worst['symbol'],
+            "worst_return": round(float(worst['return_pct']), 2),
+            "spread": round(float(best['return_pct'] - worst['return_pct']), 2),
+            "stocks_compared": len(comparisons)
+        }
+    }
 
 
-def get_delivery_momentum(start_date: str = None, end_date: str = None, min_delivery: float = 50.0) -> str:
+def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[str] = None, min_delivery: float = 50.0) -> str:
     """
     Find stocks with consistently high delivery percentage (institutional buying).
     
@@ -618,7 +717,105 @@ Stocks with avg delivery ≥ {min_delivery}% (institutional conviction)
     return output
 
 
-def detect_breakouts(start_date: str = None, end_date: str = None, threshold: float = 10.0) -> str:
+def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[str] = None, min_delivery: float = 50.0) -> dict:
+    """
+    Find stocks with consistently high delivery percentage (institutional buying).
+    
+    Args:
+        start_date: Optional start date in YYYY-MM-DD format
+        end_date: Optional end date in YYYY-MM-DD format
+        min_delivery: Minimum average delivery % threshold (default 50%)
+    
+    Returns:
+        Dictionary with list of stocks showing strong institutional interest
+        
+    High delivery % (>50%) indicates institutions are taking delivery, not just trading.
+    """
+    _ = NSESTORE.df
+    
+    s_date = _parse_date(start_date)
+    e_date = _parse_date(end_date)
+    
+    dates_defaulted = False
+    if not s_date or not e_date:
+        if NSESTORE.max_date:
+            e_date = NSESTORE.max_date
+            s_date = e_date - timedelta(days=14)
+            dates_defaulted = True
+        else:
+            return {"tool": "get_delivery_momentum", "error": "No data available"}
+    
+    df = NSESTORE.df
+    mask = (df["DATE"] >= pd.Timestamp(s_date)) & (df["DATE"] <= pd.Timestamp(e_date))
+    filtered = df[mask].copy()
+    
+    if filtered.empty:
+        return {
+            "tool": "get_delivery_momentum",
+            "error": f"No data found between {s_date} and {e_date}"
+        }
+    
+    # Calculate average delivery for each stock
+    from investor_agent.data_engine import MetricsEngine
+    
+    results = []
+    for symbol, group in filtered.groupby("SYMBOL"):
+        stats = MetricsEngine.calculate_period_stats(group)
+        if stats and stats['avg_delivery_pct'] >= min_delivery:
+            stats['symbol'] = symbol
+            results.append(stats)
+    
+    if not results:
+        return {
+            "tool": "get_delivery_momentum",
+            "error": f"No stocks found with delivery % >= {min_delivery}%"
+        }
+    
+    # Sort by delivery percentage (highest first)
+    results.sort(key=lambda x: x['avg_delivery_pct'], reverse=True)
+    results = results[:15]  # Top 15
+    
+    stocks = []
+    for idx, stats in enumerate(results, 1):
+        # Determine signal
+        if stats['return_pct'] > 5 and stats['avg_delivery_pct'] > 60:
+            signal = "Strong Buy"
+        elif stats['return_pct'] > 0 and stats['avg_delivery_pct'] > 50:
+            signal = "Accumulation"
+        elif stats['return_pct'] < -5 and stats['avg_delivery_pct'] > 60:
+            signal = "Distribution"
+        else:
+            signal = "Watch"
+        
+        stocks.append({
+            "rank": idx,
+            "symbol": stats['symbol'],
+            "delivery_pct": round(float(stats['avg_delivery_pct']), 1),
+            "return_pct": round(float(stats['return_pct']), 2),
+            "price_start": round(float(stats['start_price']), 2),
+            "price_end": round(float(stats['end_price']), 2),
+            "signal": signal
+        })
+    
+    return {
+        "tool": "get_delivery_momentum",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "min_delivery_threshold": min_delivery,
+        "stocks": stocks,
+        "summary": {
+            "total_found": len(stocks),
+            "avg_delivery": round(sum(s['delivery_pct'] for s in stocks) / len(stocks), 1),
+            "interpretation": "High delivery % = Institutions taking positions (bullish if price rising)"
+        }
+    }
+
+
+def detect_breakouts(start_date: Optional[str] = None, end_date: Optional[str] = None, threshold: float = 10.0) -> dict:
     """
     Detect stocks that are breaking out (hitting new highs with strong momentum).
     
@@ -628,61 +825,80 @@ def detect_breakouts(start_date: str = None, end_date: str = None, threshold: fl
         threshold: Minimum return % to qualify as breakout (default 10%)
     
     Returns:
-        List of stocks with price breakouts and strong momentum
+        Dictionary with list of stocks showing price breakouts and strong momentum
     """
     _ = NSESTORE.df
     
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    # Default to last 7 days
+    dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=7)
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"tool": "detect_breakouts", "error": "No data available"}
     
     # Get top gainers
     ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=50, metric="return")
     
     if ranked.empty:
-        return f"❌ No data found between {s_date} and {e_date}"
+        return {
+            "tool": "detect_breakouts",
+            "error": f"No data found between {s_date} and {e_date}"
+        }
     
     # Filter for breakout candidates (high return + moderate volatility)
-    breakouts = ranked[
+    breakouts_df = ranked[
         (ranked['return_pct'] >= threshold) & 
         (ranked['volatility'] < 15)  # Not too volatile (avoid manipulation)
     ].head(10)
     
-    if breakouts.empty:
-        return f"❌ No breakout candidates found (return >= {threshold}%, volatility < 15%)"
+    if breakouts_df.empty:
+        return {
+            "tool": "detect_breakouts",
+            "error": f"No breakout candidates found (return >= {threshold}%, volatility < 15%)"
+        }
     
-    output = f"""### ⚡ Breakout Candidates ({s_date} to {e_date})
-
-Stocks with return ≥ {threshold}% and controlled volatility
-
-| Rank | Symbol | Return % | Volatility | Delivery % | Breakout Quality |
-|------|--------|----------|------------|------------|------------------|
-"""
-    
-    for idx, (_, row) in enumerate(breakouts.iterrows(), 1):
+    breakouts = []
+    for idx, (_, row) in enumerate(breakouts_df.iterrows(), 1):
         # Quality score
         if row['avg_delivery_pct'] > 60:
-            quality = "🟢 High (Institutional)"
+            quality = "High (Institutional)"
         elif row['avg_delivery_pct'] > 40:
-            quality = "🟡 Medium"
+            quality = "Medium"
         else:
-            quality = "🔴 Low (Retail)"
+            quality = "Low (Retail)"
         
-        output += (f"| {idx:2d}   | {row['symbol']:10s} | "
-                  f"{row['return_pct']:+6.2f}% | {row['volatility']:5.2f}% | "
-                  f"{row['avg_delivery_pct']:5.1f}% | {quality} |\n")
+        breakouts.append({
+            "rank": idx,
+            "symbol": row['symbol'],
+            "return_pct": round(float(row['return_pct']), 2),
+            "volatility": round(float(row['volatility']), 2),
+            "delivery_pct": round(float(row['avg_delivery_pct']), 1),
+            "price_start": round(float(row['start_price']), 2),
+            "price_end": round(float(row['end_price']), 2),
+            "quality": quality
+        })
     
-    output += f"\n**Breakouts found:** {len(breakouts)}\n"
-    output += "**Strategy:** Look for high delivery % breakouts (institutional backing)\n"
-    
-    return output
+    return {
+        "tool": "detect_breakouts",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(breakouts_df.iloc[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "threshold": threshold,
+        "breakouts": breakouts,
+        "summary": {
+            "total_found": len(breakouts),
+            "avg_return": round(sum(b['return_pct'] for b in breakouts) / len(breakouts), 2),
+            "strategy": "Look for high delivery % breakouts (institutional backing)"
+        }
+    }
 
 
 def list_available_tools() -> str:
@@ -773,7 +989,7 @@ def list_available_tools() -> str:
 # PHASE 3: PROFESSIONAL TRADING TOOLS
 # ==============================================================================
 
-def get_52week_high_low(symbols: list = None, top_n: int = 20) -> str:
+def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) -> dict:
     """
     Find stocks near their 52-week highs or lows (critical psychological levels).
     
@@ -782,7 +998,7 @@ def get_52week_high_low(symbols: list = None, top_n: int = 20) -> str:
         top_n: Number of stocks to return (default 20)
     
     Returns:
-        Stocks trading near 52-week highs (breakout candidates) or lows (reversal plays)
+        Dictionary with stocks trading near 52-week highs (breakout candidates) or lows (reversal plays)
         
     Near 52-week high = within 5% of high (bullish breakout)
     Near 52-week low = within 10% of low (potential reversal/value play)
@@ -790,7 +1006,7 @@ def get_52week_high_low(symbols: list = None, top_n: int = 20) -> str:
     _ = NSESTORE.df
     
     if not NSESTORE.max_date:
-        return "❌ No data available."
+        return {"tool": "get_52week_high_low", "error": "No data available"}
     
     end_date = NSESTORE.max_date
     start_date = end_date - timedelta(days=365)
@@ -800,10 +1016,10 @@ def get_52week_high_low(symbols: list = None, top_n: int = 20) -> str:
     filtered = df[mask].copy()
     
     if filtered.empty:
-        return "❌ Insufficient data for 52-week analysis"
+        return {"tool": "get_52week_high_low", "error": "Insufficient data for 52-week analysis"}
     
-    results_high = []
-    results_low = []
+    near_highs = []
+    near_lows = []
     
     symbols_to_check = symbols if symbols else filtered['SYMBOL'].unique()
     
@@ -822,61 +1038,48 @@ def get_52week_high_low(symbols: list = None, top_n: int = 20) -> str:
         
         # Near 52-week high (within 5%)
         if dist_from_high >= -5:
-            results_high.append({
+            signal = "At High" if dist_from_high >= -1 else "Near High"
+            near_highs.append({
                 'symbol': symbol,
-                'current': current_price,
-                'week_52_high': week_52_high,
-                'distance': dist_from_high
+                'current_price': round(float(current_price), 2),
+                'week_52_high': round(float(week_52_high), 2),
+                'distance_pct': round(float(dist_from_high), 2),
+                'signal': signal
             })
         
         # Near 52-week low (within 10%)
         if dist_from_low <= 10:
-            results_low.append({
+            signal = "At Low" if dist_from_low <= 1 else "Near Low"
+            near_lows.append({
                 'symbol': symbol,
-                'current': current_price,
-                'week_52_low': week_52_low,
-                'distance': dist_from_low
+                'current_price': round(float(current_price), 2),
+                'week_52_low': round(float(week_52_low), 2),
+                'distance_pct': round(float(dist_from_low), 2),
+                'signal': signal
             })
     
     # Sort and limit
-    results_high.sort(key=lambda x: x['distance'], reverse=True)
-    results_low.sort(key=lambda x: x['distance'])
+    near_highs.sort(key=lambda x: x['distance_pct'], reverse=True)
+    near_lows.sort(key=lambda x: x['distance_pct'])
     
-    output = f"### 🎯 52-Week High/Low Analysis\n\n"
-    
-    # Near Highs
-    output += "**📈 NEAR 52-WEEK HIGHS (Breakout Candidates)**\n\n"
-    if results_high:
-        output += "| Symbol | Current | 52W High | Distance | Signal |\n"
-        output += "|--------|---------|----------|----------|--------|\n"
-        
-        for item in results_high[:top_n]:
-            signal = "🔥 At High" if item['distance'] >= -1 else "⚡ Near High"
-            output += (f"| {item['symbol']:10s} | ₹{item['current']:.2f} | "
-                      f"₹{item['week_52_high']:.2f} | {item['distance']:+.1f}% | {signal} |\n")
-    else:
-        output += "_No stocks near 52-week highs_\n"
-    
-    output += "\n**📉 NEAR 52-WEEK LOWS (Value/Reversal Plays)**\n\n"
-    if results_low:
-        output += "| Symbol | Current | 52W Low | Distance | Signal |\n"
-        output += "|--------|---------|---------|----------|--------|\n"
-        
-        for item in results_low[:top_n]:
-            signal = "🔴 At Low" if item['distance'] <= 2 else "🟡 Near Low"
-            output += (f"| {item['symbol']:10s} | ₹{item['current']:.2f} | "
-                      f"₹{item['week_52_low']:.2f} | {item['distance']:+.1f}% | {signal} |\n")
-    else:
-        output += "_No stocks near 52-week lows_\n"
-    
-    output += "\n**Strategy:**\n"
-    output += "- 52W High breakouts: Look for volume confirmation + delivery % >50%\n"
-    output += "- 52W Low reversals: Check for positive divergence in delivery/volume\n"
-    
-    return output
+    return {
+        "tool": "get_52week_high_low",
+        "period": {
+            "start": str(start_date),
+            "end": str(end_date),
+            "days": 365
+        },
+        "near_highs": near_highs[:top_n],
+        "near_lows": near_lows[:top_n],
+        "summary": {
+            "stocks_near_high": len(near_highs),
+            "stocks_near_low": len(near_lows),
+            "strategy": "52W High breakouts need volume confirmation + delivery >50%; 52W Low reversals need positive divergence"
+        }
+    }
 
 
-def analyze_risk_metrics(symbol: str, start_date: str = None, end_date: str = None) -> str:
+def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
     """
     Advanced risk analysis for a stock: max drawdown, Sharpe-like metrics, volatility trends.
     
@@ -886,31 +1089,38 @@ def analyze_risk_metrics(symbol: str, start_date: str = None, end_date: str = No
         end_date: Optional end date in YYYY-MM-DD format
     
     Returns:
-        Comprehensive risk assessment with max drawdown, volatility analysis, and risk-adjusted returns
+        Dictionary with comprehensive risk assessment including max drawdown, volatility analysis, and risk-adjusted returns
     """
     _ = NSESTORE.df
     
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
     
-    # Default to last 90 days for risk analysis
+    dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
             e_date = NSESTORE.max_date
             s_date = e_date - timedelta(days=90)
+            dates_defaulted = True
         else:
-            return "❌ No data available."
+            return {"tool": "analyze_risk_metrics", "error": "No data available"}
     
     stock_df = NSESTORE.get_stock_data(symbol.upper(), s_date, e_date)
     
     if stock_df.empty or len(stock_df) < 10:
-        return f"❌ Insufficient data for {symbol.upper()}"
+        return {
+            "tool": "analyze_risk_metrics",
+            "error": f"Insufficient data for {symbol.upper()}"
+        }
     
     from investor_agent.data_engine import MetricsEngine
     stats = MetricsEngine.calculate_period_stats(stock_df)
     
     if not stats:
-        return f"❌ Unable to calculate metrics for {symbol.upper()}"
+        return {
+            "tool": "analyze_risk_metrics",
+            "error": f"Unable to calculate metrics for {symbol.upper()}"
+        }
     
     # Calculate additional risk metrics
     daily_returns = stock_df['CLOSE'].pct_change().dropna()
@@ -926,67 +1136,90 @@ def analyze_risk_metrics(symbol: str, start_date: str = None, end_date: str = No
     positive_days = len(daily_returns[daily_returns > 0])
     win_rate = (positive_days / len(daily_returns) * 100) if len(daily_returns) > 0 else 0
     
-    output = f"""### ⚠️ Risk Analysis: {symbol.upper()}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**Period:** {stats['start_date']} to {stats['end_date']} ({stats['days_count']} days)
-
-**RETURN METRICS:**
-- Total Return: {stats['return_pct']:+.2f}%
-- Momentum: {stats['momentum_pct']:+.2f}%
-- Risk-Adjusted Return: {risk_adjusted_return:.2f}x
-
-**RISK METRICS:**
-- Max Drawdown: {stats['max_drawdown']:.2f}% ⚠️
-- Volatility (Overall): {stats['volatility']:.2f}%
-- Downside Volatility: {downside_volatility:.2f}%
-- Win Rate: {win_rate:.1f}% ({positive_days}/{len(daily_returns)} days)
-
-**TECHNICAL POSITION:**
-- Current Price: ₹{stats['end_price']:.2f}
-- 20-Day SMA: ₹{stats['sma_20']:.2f} ({((stats['end_price']/stats['sma_20']-1)*100):+.1f}%)
-- 50-Day SMA: ₹{stats['sma_50']:.2f} ({((stats['end_price']/stats['sma_50']-1)*100):+.1f}%)
-- Distance from High: {stats['distance_from_high_pct']:.1f}%
-- Distance from Low: {stats['distance_from_low_pct']:+.1f}%
-
-**MOMENTUM INDICATORS:**
-- Consecutive Up Days: {stats['consecutive_ups']}
-- Consecutive Down Days: {stats['consecutive_downs']}
-- Volume Trend: {stats['volume_trend_pct']:+.1f}%
-
-**RISK VERDICT:**
-"""
-    
-    # Risk assessment
+    # Risk verdict
     if abs(stats['max_drawdown']) > 20:
-        output += "🔴 **HIGH RISK** - Severe drawdowns observed (>20%)\n"
+        risk_level = "HIGH RISK"
+        risk_detail = "Severe drawdowns observed (>20%)"
     elif abs(stats['max_drawdown']) > 10:
-        output += "🟡 **MODERATE RISK** - Significant volatility (10-20% drawdown)\n"
+        risk_level = "MODERATE RISK"
+        risk_detail = "Significant volatility (10-20% drawdown)"
     else:
-        output += "🟢 **LOW RISK** - Stable performance (<10% drawdown)\n"
+        risk_level = "LOW RISK"
+        risk_detail = "Stable performance (<10% drawdown)"
     
     # Sharpe interpretation
     if risk_adjusted_return > 1.5:
-        output += "🟢 **EXCELLENT** risk-reward ratio (>1.5x)\n"
+        sharpe_rating = "EXCELLENT"
+        sharpe_detail = "risk-reward ratio (>1.5x)"
     elif risk_adjusted_return > 0.8:
-        output += "🟢 **GOOD** risk-reward ratio (0.8-1.5x)\n"
+        sharpe_rating = "GOOD"
+        sharpe_detail = "risk-reward ratio (0.8-1.5x)"
     elif risk_adjusted_return > 0:
-        output += "🟡 **FAIR** risk-reward ratio (0-0.8x)\n"
+        sharpe_rating = "FAIR"
+        sharpe_detail = "risk-reward ratio (0-0.8x)"
     else:
-        output += "🔴 **POOR** risk-reward - losses exceed volatility\n"
+        sharpe_rating = "POOR"
+        sharpe_detail = "losses exceed volatility"
     
     # Trend assessment
     if stats['end_price'] > stats['sma_20'] > stats['sma_50']:
-        output += "🟢 **UPTREND** - Price above both 20-day and 50-day SMA\n"
+        trend = "UPTREND"
+        trend_detail = "Price above both 20-day and 50-day SMA"
     elif stats['end_price'] < stats['sma_20'] < stats['sma_50']:
-        output += "🔴 **DOWNTREND** - Price below both SMAs\n"
+        trend = "DOWNTREND"
+        trend_detail = "Price below both SMAs"
     else:
-        output += "🟡 **MIXED TREND** - Consolidation phase\n"
+        trend = "MIXED TREND"
+        trend_detail = "Consolidation phase"
     
-    return output
+    return {
+        "tool": "analyze_risk_metrics",
+        "symbol": symbol.upper(),
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(stats['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "returns": {
+            "total_return_pct": round(float(stats['return_pct']), 2),
+            "momentum_pct": round(float(stats['momentum_pct']), 2),
+            "risk_adjusted_return": round(float(risk_adjusted_return), 2)
+        },
+        "risk": {
+            "max_drawdown": round(float(stats['max_drawdown']), 2),
+            "volatility": round(float(stats['volatility']), 2),
+            "downside_volatility": round(float(downside_volatility), 2),
+            "win_rate": round(float(win_rate), 1),
+            "positive_days": int(positive_days),
+            "total_days": len(daily_returns)
+        },
+        "technical": {
+            "current_price": round(float(stats['end_price']), 2),
+            "sma_20": round(float(stats['sma_20']), 2),
+            "sma_50": round(float(stats['sma_50']), 2),
+            "sma20_distance_pct": round(((stats['end_price']/stats['sma_20']-1)*100), 1) if stats['sma_20'] > 0 else 0,
+            "sma50_distance_pct": round(((stats['end_price']/stats['sma_50']-1)*100), 1) if stats['sma_50'] > 0 else 0,
+            "distance_from_high_pct": round(float(stats['distance_from_high_pct']), 1),
+            "distance_from_low_pct": round(float(stats['distance_from_low_pct']), 1)
+        },
+        "momentum": {
+            "consecutive_up_days": int(stats['consecutive_ups']),
+            "consecutive_down_days": int(stats['consecutive_downs']),
+            "volume_trend_pct": round(float(stats['volume_trend_pct']), 1)
+        },
+        "verdict": {
+            "risk_level": risk_level,
+            "risk_detail": risk_detail,
+            "sharpe_rating": sharpe_rating,
+            "sharpe_detail": sharpe_detail,
+            "trend": trend,
+            "trend_detail": trend_detail
+        }
+    }
 
 
-def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3, top_n: int = 15) -> str:
+def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3, top_n: int = 15) -> dict:
     """
     Find stocks with strong momentum (consecutive up days + positive returns).
     
@@ -996,12 +1229,12 @@ def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3,
         top_n: Number of stocks to return (default 15)
     
     Returns:
-        Stocks showing sustained upward momentum
+        Dictionary with stocks showing sustained upward momentum
     """
     _ = NSESTORE.df
     
     if not NSESTORE.max_date:
-        return "❌ No data available."
+        return {"tool": "find_momentum_stocks", "error": "No data available"}
     
     end_date = NSESTORE.max_date
     start_date = end_date - timedelta(days=15)  # Extra buffer
@@ -1011,7 +1244,7 @@ def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3,
     filtered = df[mask].copy()
     
     if filtered.empty:
-        return "❌ No data for momentum analysis"
+        return {"tool": "find_momentum_stocks", "error": "No data for momentum analysis"}
     
     from investor_agent.data_engine import MetricsEngine
     
@@ -1030,37 +1263,51 @@ def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3,
             results.append(stats)
     
     if not results:
-        return f"❌ No momentum stocks found (return >={min_return}%, consecutive days >={min_consecutive_days})"
+        return {
+            "tool": "find_momentum_stocks",
+            "error": f"No momentum stocks found (return >={min_return}%, consecutive days >={min_consecutive_days})"
+        }
     
     # Sort by combination of return and consecutive days
     results.sort(key=lambda x: (x['consecutive_ups'], x['return_pct']), reverse=True)
     results = results[:top_n]
     
-    output = f"""### 🚀 Momentum Stocks (Last 10-15 Days)
-
-**Criteria:** Return ≥ {min_return}% + Consecutive Up Days ≥ {min_consecutive_days}
-
-| Rank | Symbol | Return % | Streak | Volume Trend | SMA Status |
-|------|--------|----------|--------|--------------|------------|
-"""
-    
+    stocks = []
     for idx, stats in enumerate(results, 1):
         # SMA status
-        if stats['end_price'] > stats['sma_20']:
-            sma_status = "🟢 Above SMA"
-        else:
-            sma_status = "🔴 Below SMA"
+        sma_status = "Above SMA" if stats['end_price'] > stats['sma_20'] else "Below SMA"
         
-        output += (f"| {idx:2d}   | {stats['symbol']:10s} | {stats['return_pct']:+6.2f}% | "
-                  f"{stats['consecutive_ups']}📈 | {stats['volume_trend_pct']:+5.1f}% | {sma_status} |\n")
+        stocks.append({
+            "rank": idx,
+            "symbol": stats['symbol'],
+            "return_pct": round(float(stats['return_pct']), 2),
+            "consecutive_up_days": int(stats['consecutive_ups']),
+            "volume_trend_pct": round(float(stats['volume_trend_pct']), 1),
+            "sma_status": sma_status,
+            "price_end": round(float(stats['end_price']), 2),
+            "sma_20": round(float(stats['sma_20']), 2)
+        })
     
-    output += f"\n**Total momentum stocks:** {len(results)}\n"
-    output += "**Strategy:** Look for volume confirmation + price above SMA for continuation\n"
-    
-    return output
+    return {
+        "tool": "find_momentum_stocks",
+        "period": {
+            "start": str(start_date),
+            "end": str(end_date),
+            "days": int(results[0]['days_count'])
+        },
+        "criteria": {
+            "min_return": min_return,
+            "min_consecutive_days": min_consecutive_days
+        },
+        "stocks": stocks,
+        "summary": {
+            "total_found": len(stocks),
+            "strategy": "Look for volume confirmation + price above SMA for continuation"
+        }
+    }
 
 
-def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> str:
+def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> dict:
     """
     Find oversold stocks showing early reversal signs (for contrarian plays).
     
@@ -1069,14 +1316,14 @@ def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> str:
         top_n: Number of candidates to return (default 15)
     
     Returns:
-        Stocks that dropped significantly but showing reversal signals
+        Dictionary with stocks that dropped significantly but showing reversal signals
         
     Reversal signals: Large decline + recent consecutive up days + volume increase
     """
     _ = NSESTORE.df
     
     if not NSESTORE.max_date:
-        return "❌ No data available."
+        return {"tool": "detect_reversal_candidates", "error": "No data available"}
     
     end_date = NSESTORE.max_date
     start_date = end_date - timedelta(days=lookback_days + 5)
@@ -1086,7 +1333,7 @@ def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> str:
     filtered = df[mask].copy()
     
     if filtered.empty:
-        return "❌ No data for reversal analysis"
+        return {"tool": "detect_reversal_candidates", "error": "No data for reversal analysis"}
     
     from investor_agent.data_engine import MetricsEngine
     
@@ -1114,41 +1361,58 @@ def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> str:
             results.append(stats)
     
     if not results:
-        return f"❌ No reversal candidates found (last {lookback_days} days)"
+        return {
+            "tool": "detect_reversal_candidates",
+            "error": f"No reversal candidates found (last {lookback_days} days)"
+        }
     
     # Sort by combination of oversold + reversal strength
     results.sort(key=lambda x: (x['consecutive_ups'], -x['return_pct']), reverse=True)
     results = results[:top_n]
     
-    output = f"""### 🔄 Reversal Candidates (Last {lookback_days} Days)
-
-**Criteria:** Oversold (<-5%) + Recent Up Days (≥2) + Volume Surge (>10%)
-
-| Rank | Symbol | Overall Return | Up Streak | Vol Trend | From Low | Signal |
-|------|--------|----------------|-----------|-----------|----------|--------|
-"""
-    
+    candidates = []
     for idx, stats in enumerate(results, 1):
         # Reversal strength
         if stats['consecutive_ups'] >= 3 and stats['volume_trend_pct'] > 30:
-            signal = "🟢 Strong"
+            signal = "Strong"
         elif stats['consecutive_ups'] >= 2 and stats['volume_trend_pct'] > 15:
-            signal = "🟡 Moderate"
+            signal = "Moderate"
         else:
-            signal = "⚪ Weak"
+            signal = "Weak"
         
-        output += (f"| {idx:2d}   | {stats['symbol']:10s} | {stats['return_pct']:+6.2f}% | "
-                  f"{stats['consecutive_ups']}📈 | {stats['volume_trend_pct']:+5.1f}% | "
-                  f"{stats['distance_from_low_pct']:+5.1f}% | {signal} |\n")
+        candidates.append({
+            "rank": idx,
+            "symbol": stats['symbol'],
+            "overall_return_pct": round(float(stats['return_pct']), 2),
+            "consecutive_up_days": int(stats['consecutive_ups']),
+            "volume_trend_pct": round(float(stats['volume_trend_pct']), 1),
+            "distance_from_low_pct": round(float(stats['distance_from_low_pct']), 1),
+            "signal": signal,
+            "price_current": round(float(stats['end_price']), 2)
+        })
     
-    output += f"\n**Total candidates:** {len(results)}\n"
-    output += "**⚠️ Risk:** Reversal trades are counter-trend. Wait for confirmation before entry.\n"
-    output += "**Strategy:** Look for 3+ consecutive up days + delivery % >40% for confirmation\n"
-    
-    return output
+    return {
+        "tool": "detect_reversal_candidates",
+        "period": {
+            "lookback_days": lookback_days,
+            "start": str(start_date),
+            "end": str(end_date)
+        },
+        "criteria": {
+            "min_decline": -5.0,
+            "min_up_days": 2,
+            "min_volume_surge": 10.0
+        },
+        "candidates": candidates,
+        "summary": {
+            "total_found": len(candidates),
+            "risk_warning": "Reversal trades are counter-trend. Wait for confirmation before entry.",
+            "strategy": "Look for 3+ consecutive up days + delivery % >40% for confirmation"
+        }
+    }
 
 
-def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -> str:
+def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -> dict:
     """
     Detect volume-price divergence (price up but volume down = weak rally, and vice versa).
     
@@ -1157,7 +1421,7 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
         top_n: Number of stocks to return (default 15)
     
     Returns:
-        Stocks showing significant volume-price divergence (warning signals)
+        Dictionary with stocks showing significant volume-price divergence (warning signals)
         
     Bearish divergence: Price rising but volume declining (rally losing steam)
     Bullish divergence: Price falling but volume increasing (accumulation)
@@ -1165,7 +1429,7 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
     _ = NSESTORE.df
     
     if not NSESTORE.max_date:
-        return "❌ No data available."
+        return {"tool": "get_volume_price_divergence", "error": "No data available"}
     
     end_date = NSESTORE.max_date
     start_date = end_date - timedelta(days=20)
@@ -1175,7 +1439,7 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
     filtered = df[mask].copy()
     
     if filtered.empty:
-        return "❌ No data for divergence analysis"
+        return {"tool": "get_volume_price_divergence", "error": "No data for divergence analysis"}
     
     from investor_agent.data_engine import MetricsEngine
     
@@ -1190,58 +1454,53 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
         if not stats:
             continue
         
-        # Calculate divergence
-        divergence = stats['return_pct'] + stats['volume_trend_pct']
-        
         # Bearish: Price positive, volume negative (or vice versa with threshold)
         if stats['return_pct'] > 3 and stats['volume_trend_pct'] < -min_divergence:
+            divergence_value = abs(stats['return_pct'] + stats['volume_trend_pct'])
+            risk = "High" if divergence_value > 40 else "Moderate"
             bearish_div.append({
-                **stats,
-                'divergence': abs(stats['return_pct'] + stats['volume_trend_pct'])
+                "symbol": stats['symbol'],
+                "price_return_pct": round(float(stats['return_pct']), 2),
+                "volume_trend_pct": round(float(stats['volume_trend_pct']), 2),
+                "divergence": round(float(divergence_value), 1),
+                "risk": risk
             })
         
         # Bullish: Price negative, volume positive
         if stats['return_pct'] < -3 and stats['volume_trend_pct'] > min_divergence:
+            divergence_value = abs(stats['return_pct'] - stats['volume_trend_pct'])
+            opportunity = "High" if divergence_value > 40 else "Moderate"
             bullish_div.append({
-                **stats,
-                'divergence': abs(stats['return_pct'] - stats['volume_trend_pct'])
+                "symbol": stats['symbol'],
+                "price_return_pct": round(float(stats['return_pct']), 2),
+                "volume_trend_pct": round(float(stats['volume_trend_pct']), 2),
+                "divergence": round(float(divergence_value), 1),
+                "opportunity": opportunity
             })
     
-    output = f"### ⚠️ Volume-Price Divergence Analysis\n\n"
+    # Sort by divergence strength
+    bearish_div.sort(key=lambda x: x['divergence'], reverse=True)
+    bullish_div.sort(key=lambda x: x['divergence'], reverse=True)
     
-    # Bearish divergences
-    output += "**🔴 BEARISH DIVERGENCE (Price ↑ but Volume ↓)**\n"
-    output += "_Rally losing steam - potential reversal_\n\n"
-    
-    if bearish_div:
-        bearish_div.sort(key=lambda x: x['divergence'], reverse=True)
-        output += "| Symbol | Price Return | Volume Trend | Divergence | Risk |\n"
-        output += "|--------|--------------|--------------|------------|------|\n"
-        
-        for item in bearish_div[:top_n]:
-            risk = "🔴 High" if item['divergence'] > 40 else "🟡 Moderate"
-            output += (f"| {item['symbol']:10s} | {item['return_pct']:+6.2f}% | "
-                      f"{item['volume_trend_pct']:+6.2f}% | {item['divergence']:.1f}% | {risk} |\n")
-    else:
-        output += "_No bearish divergences found_\n"
-    
-    output += "\n**🟢 BULLISH DIVERGENCE (Price ↓ but Volume ↑)**\n"
-    output += "_Accumulation during decline - potential reversal_\n\n"
-    
-    if bullish_div:
-        bullish_div.sort(key=lambda x: x['divergence'], reverse=True)
-        output += "| Symbol | Price Return | Volume Trend | Divergence | Opportunity |\n"
-        output += "|--------|--------------|--------------|------------|-------------|\n"
-        
-        for item in bullish_div[:top_n]:
-            opp = "🟢 High" if item['divergence'] > 40 else "🟡 Moderate"
-            output += (f"| {item['symbol']:10s} | {item['return_pct']:+6.2f}% | "
-                      f"{item['volume_trend_pct']:+6.2f}% | {item['divergence']:.1f}% | {opp} |\n")
-    else:
-        output += "_No bullish divergences found_\n"
-    
-    output += "\n**Trading Implications:**\n"
-    output += "- Bearish divergence: Consider taking profits or tightening stops\n"
-    output += "- Bullish divergence: Potential accumulation - watch for price reversal confirmation\n"
-    
-    return output
+    return {
+        "tool": "get_volume_price_divergence",
+        "period": {
+            "start": str(start_date),
+            "end": str(end_date),
+            "days": 20
+        },
+        "min_divergence_threshold": min_divergence,
+        "bearish_divergence": {
+            "description": "Price rising but volume declining - rally losing steam, potential reversal",
+            "stocks": bearish_div[:top_n]
+        },
+        "bullish_divergence": {
+            "description": "Price falling but volume increasing - accumulation during decline, potential reversal",
+            "stocks": bullish_div[:top_n]
+        },
+        "summary": {
+            "bearish_count": len(bearish_div),
+            "bullish_count": len(bullish_div),
+            "interpretation": "Divergences indicate potential trend reversals - confirm with delivery % and price action"
+        }
+    }

@@ -54,7 +54,7 @@ pro_model = Gemini(model="gemini-2.5-pro", api_key=API_KEY)
 root_agent = create_pipeline(
     model,                    # Flash-Lite for Entry/News (simple tasks)
     market_model=flash_model,   # Flash for Market (8 tools, complex analysis)
-    merger_model=pro_model    # Pro for Merger (synthesis, report generation)
+    merger_model=flash_model    # Pro for Merger (synthesis, report generation)
 )
 
 logger.info("✅ Root agent initialized and ready for `adk web`.")
