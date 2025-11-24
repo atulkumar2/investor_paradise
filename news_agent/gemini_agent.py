@@ -15,8 +15,10 @@ from google.adk.models.google_llm import Gemini
 from google.adk.runners import InMemoryRunner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-
-from test_search_query import load_persisted_collection, semantic_search
+from test_search_query import (
+    init_search_resources,
+    semantic_search,
+)
 
 # Constants
 USER_ID = "default_user"
@@ -74,14 +76,21 @@ retry_config = types.HttpRetryOptions(
 )
 
 def setup_agent(
-    persist_dir: str = DEFAULT_PERSIST_DIR,
+    persist_dirs: list[str] | None = None,
 ) -> tuple[Agent, InMemoryRunner, InMemorySessionService, str]:
-    """Load vector collection and construct agent + runtime objects."""
-    logger.info("Loading ChromaDB collection (persist_dir=%s)...", persist_dir)
-    # Ensure tools see the chosen persist dir on lazy init
-    os.environ["PERSIST_DIR"] = persist_dir
-    load_persisted_collection(persist_dir=persist_dir)
-    logger.info("PDF document collection loaded.")
+    """Load vector collections (single or multiple) and construct runtime objects.
+
+    If multiple directories are provided they are joined with commas and passed
+    via PERSIST_DIR for downstream lazy initialization in search utilities.
+    """
+    if not persist_dirs:
+        persist_dirs = [DEFAULT_PERSIST_DIR]
+    display = ",".join(persist_dirs)
+    logger.info("Loading ChromaDB collections (dirs=%s)...", display)
+    combined = ",".join(persist_dirs)
+    os.environ["PERSIST_DIR"] = combined
+    init_search_resources(persist_dir=combined)
+    logger.info("Vector collections ready (count=%d).", len(persist_dirs))
 
     agent = Agent(
         name="helpful_assistant",
@@ -244,7 +253,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--persist-dir",
         default=DEFAULT_PERSIST_DIR,
-        help="Chroma persistent directory (default: %(default)s)",
+        help="Single Chroma persistent directory (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--persist-dirs",
+        nargs="+",
+        help=(
+            "Multiple persistent directories (space separated). "
+            "Overrides --persist-dir."
+        ),
     )
     parser.add_argument(
         "--log-level",
@@ -259,9 +276,13 @@ async def main(argv: list[str] | None = None):
     """Main function to run the interactive agent."""
     args = _build_arg_parser().parse_args(argv)
     _configure_logging(args.log_level)
-    agent, run, sess_service, model_name = setup_agent(
-        persist_dir=args.persist_dir
-    )
+    # Determine directories precedence: --persist-dirs over --persist-dir
+    dirs: list[str]
+    if args.persist_dirs:
+        dirs = args.persist_dirs
+    else:
+        dirs = [args.persist_dir]
+    agent, run, sess_service, model_name = setup_agent(persist_dirs=dirs)
     logger.info(
         "Ask questions about the PDF documents. Type 'exit' or 'quit' to quit."
     )

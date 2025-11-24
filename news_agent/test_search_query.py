@@ -17,45 +17,85 @@ DEFAULT_PERSIST_DIR = './vector-data'
 DEFAULT_COLLECTION = 'pdf_chunks'
 DEFAULT_MODEL = 'intfloat/multilingual-e5-base'
 
-_state = SimpleNamespace(collection=None, model=None)
-_model = None
+_state = SimpleNamespace(collections=[], model=None)
 logger = logging.getLogger("semantic_search")
 
 
 def load_persisted_collection(
-        collection_name: str = DEFAULT_COLLECTION,
-        persist_dir: str = DEFAULT_PERSIST_DIR,
+    collection_name: str = DEFAULT_COLLECTION,
+    persist_dir: str = DEFAULT_PERSIST_DIR,
 ):
-    """
-    Loads a ChromaDB collection from the given persistent directory.
-
-    Args:
-        collection_name (str, optional): Name of the collection to load.
-        persist_dir (str, optional): Path to directory where Chroma persists data.
-
-    Returns:
-        chromadb.api.models.Collection.Collection: Loaded ChromaDB collection.
-    """
+    """Load a single ChromaDB collection from one persistent directory."""
     persistent_client = chromadb.PersistentClient(path=persist_dir)
     collection = persistent_client.get_collection(collection_name)
     logger.info(
-        "Collection '%s' count: %d",
+        "Loaded collection '%s' from '%s' (count=%d)",
         collection_name,
+        persist_dir,
         collection.count(),
     )
     return collection
+
+
+def load_persisted_collections(
+    collection_name: str = DEFAULT_COLLECTION,
+    persist_dirs: list[str] | None = None,
+):
+    """Load the same-named collection from multiple persistent directories.
+
+    Returns list of Collection objects. Directories that fail to load are
+    logged and skipped.
+    """
+    if not persist_dirs:
+        persist_dirs = [DEFAULT_PERSIST_DIR]
+    collections = []
+    for d in persist_dirs:
+        try:
+            col = load_persisted_collection(
+                collection_name=collection_name,
+                persist_dir=d,
+            )
+            collections.append(col)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Skipping '%s' due to load error: %s", d, e)
+    if not collections:
+        raise RuntimeError("No collections loaded from provided directories")
+    return collections
 
 def init_search_resources(
     persist_dir: str | None = None,
     collection_name: str = DEFAULT_COLLECTION,
     model_name: str = DEFAULT_MODEL,
 ) -> None:
-    """Initialize and cache the Chroma collection and embedding model."""
+    """Initialize and cache collections + embedding model.
+
+    persist_dir may specify multiple directories separated by commas or
+    os.pathsep (':').
+    """
     if persist_dir is None:
-        persist_dir = os.environ.get('PERSIST_DIR', DEFAULT_PERSIST_DIR)
-    _state.collection = load_persisted_collection(
-        collection_name=collection_name, persist_dir=persist_dir
-    )
+        persist_dir = os.environ.get("PERSIST_DIR", DEFAULT_PERSIST_DIR)
+    # Split on comma and os.pathsep, strip empties
+    raw_parts = []
+    for segment in persist_dir.split(","):
+        raw_parts.extend(segment.split(os.pathsep))
+    dirs = [p.strip() for p in raw_parts if p.strip()]
+    if not dirs:
+        dirs = [DEFAULT_PERSIST_DIR]
+    if len(dirs) == 1:
+        _state.collections = [
+            load_persisted_collection(
+                collection_name=collection_name,
+                persist_dir=dirs[0],
+            )
+        ]
+    else:
+        logger.info(
+            "Loading multiple collections from %d directories", len(dirs)
+        )
+        _state.collections = load_persisted_collections(
+            collection_name=collection_name,
+            persist_dirs=dirs,
+        )
     _state.model = SentenceTransformer(model_name)
 
 
@@ -83,7 +123,7 @@ def semantic_search(
     """
     # Ensure resources are initialized
     # Ensure resources are initialized
-    if _state.collection is None or _state.model is None:
+    if (not _state.collections) or _state.model is None:
         init_search_resources()
 
     # Add query prefix required by multilingual-e5-base model
@@ -95,40 +135,37 @@ def semantic_search(
     qe_list = cast(list[float], query_embedding)
 
     # Perform semantic search
-    results = _state.collection.query(  # type: ignore[union-attr]
-        query_embeddings=[qe_list],
-        n_results=n_results
-    )
-    # Extract results
-    if not results or not results.get('documents'):
-        return []
-    documents = results['documents'][0]  # type: ignore[index]
-    metadatas = results['metadatas'][0]  # type: ignore[index]
-    scores_or_distances = results.get('distances', results.get('scores', [[]]))[0]  # type: ignore[index]
-
-    # Build result list
-    search_results = []
-    for idx, (doc, meta, score) in enumerate(
-        zip(documents, metadatas, scores_or_distances)
-    ):
-
-        # Calculate similarity score
-        if 'scores' in results:  # cosine similarity (1==identical)
-            similarity = score
-        elif 'distances' in results:  # distance; 0 is perfect
-            similarity = 1 - score  # convert distance to similarity
-        else:
-            similarity = None
-
-        # Filter by minimum similarity threshold
-        if similarity is not None and similarity >= min_similarity:
-            search_results.append({
-                'document': doc,
-                'metadata': meta,
-                'similarity': round(similarity, 4)
-            })
-
-    return search_results
+    aggregate_results = []
+    for col in _state.collections:  # type: ignore[attr-defined]
+        results = col.query(query_embeddings=[qe_list], n_results=n_results)
+        if not results or not results.get("documents"):
+            continue
+        documents = results["documents"][0]  # type: ignore[index]
+        metadatas = results["metadatas"][0]  # type: ignore[index]
+        scores_or_distances = results.get("distances", results.get("scores", [[]]))[0]  # type: ignore[index]
+        for doc, meta, score in zip(
+            documents,
+            metadatas,
+            scores_or_distances,
+        ):
+            if "scores" in results:
+                similarity = score
+            elif "distances" in results:
+                similarity = 1 - score
+            else:
+                similarity = None
+            if similarity is not None and similarity >= min_similarity:
+                # Optionally add origin info at ingest time if required.
+                aggregate_results.append(
+                    {
+                        "document": doc,
+                        "metadata": meta,
+                        "similarity": round(similarity, 4),
+                    }
+                )
+    # Sort combined results by similarity desc and truncate
+    aggregate_results.sort(key=lambda r: r["similarity"], reverse=True)
+    return aggregate_results[:n_results]
 
 if __name__ == '__main__':
     # Configure logging only for direct script execution

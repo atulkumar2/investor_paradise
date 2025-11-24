@@ -4,5 +4,13 @@
         "Rawdata",
         "TOTTRDQTY",
         "TOTTRDVAL"
-    ]
+    ],
+    // Format a file on save.
+    "editor.formatOnSave": true,
+    // Use Black as the default formatter for Python
+    "python.formatting.provider": "black"
+    // Optionally, enable Ruff fix on save (if using Ruff LSP extension)
+    // "editor.codeActionsOnSave": {
+    //     "source.fixAll.ruff": true
+    // }
 }
