@@ -1,3 +1,5 @@
+"""Logging configuration for Investor Agent."""
+
 import io
 import logging
 import os
@@ -9,7 +11,7 @@ for log_file in ["logger.log", "web.log", "tunnel.log"]:
         os.remove(log_file)
         print(f"🧹 Cleaned up {log_file}")
 
-_LOG_FILE = "logger.log"
+_LOG_FILE = "investor_agent_logger.log"
 
 # Configure root logging to write to the log file if not already configured.
 if not logging.getLogger().handlers:
@@ -39,14 +41,15 @@ def get_logger(name: str):
     if not has_file:
         fh = logging.FileHandler(_LOG_FILE, encoding="utf-8")
         fh.setLevel(logging.DEBUG)
-        fmt = logging.Formatter("%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s")
+        fmt = logging.Formatter(
+          "%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s")
         fh.setFormatter(fmt)
         logger.addHandler(fh)
 
     # Attach a stream handler that safely writes UTF-8 (replace unencodable chars).
     has_stream = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
     if not has_stream:
-        # Wrap the stdout buffer with a TextIOWrapper that encodes to utf-8 and replaces errors.
+        # Wrap stdout buffer with TextIOWrapper that encodes to utf-8 and replaces errors
         try:
             utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, 
                           encoding="utf-8", errors="replace", line_buffering=True)

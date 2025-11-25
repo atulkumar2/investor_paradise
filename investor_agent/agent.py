@@ -1,32 +1,36 @@
+""" Investor Agent - ADK Web Backend Initialization """
+
 import os
-from dotenv import load_dotenv
+
 import httpx
-import sys
+from dotenv import load_dotenv
+from google.adk.models.google_llm import Gemini
+
+from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
+from investor_agent.sub_agents import create_pipeline
 
 logger = get_logger(__name__)
 
 # --- 1. SSL Patch (Crucial for your env) ---
 original_init = httpx.AsyncClient.__init__
 def patched_init(self, *args, **kwargs):
+    """ Patch httpx AsyncClient to disable SSL verification. """
     kwargs['verify'] = False
     original_init(self, *args, **kwargs)
+
 httpx.AsyncClient._init_ = patched_init
 # ------------------------------------------
 
 # --- 2. Load Config, logging & Data ---
 load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 
-if not API_KEY:
+if not GOOGLE_API_KEY:
     raise ValueError("❌ GOOGLE_API_KEY not found. Check .env file.")
 
-from google.adk.models.google_llm import Gemini
-from google.adk.runners import Runner
-from google.adk.sessions import DatabaseSessionService
-from investor_agent.sub_agents import create_pipeline
-from investor_agent.data_engine import NSESTORE
+
 
 logger.info("🚀 Initializing Web App Backend...")
 
@@ -37,14 +41,18 @@ logger.info("🚀 Initializing Web App Backend...")
 # 3. ADK web server is ready immediately after startup
 logger.info("📂 Pre-loading NSE stock data...")
 _ = NSESTORE.df  # Force immediate load (triggers cache check or CSV load)
-logger.info(f"✅ Data loaded: {len(NSESTORE.df):,} rows, {NSESTORE.total_symbols:,} symbols")
-logger.info(f"📅 Date range: {NSESTORE.get_data_context()}")
+logger.info(
+    "✅ Data loaded: %s rows, %s symbols",
+    format(len(NSESTORE.df), ","),
+    format(NSESTORE.total_symbols, ","),
+)
+logger.info("📅 Date range: %s", NSESTORE.get_data_context())
 
 # --- 3. Initialize Model and Root Agent ---
 # Default: Use Flash-Lite for all agents (fast, cost-effective)
-model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY)
-flash_model = Gemini(model="gemini-2.5-flash", api_key=API_KEY)
-pro_model = Gemini(model="gemini-2.5-pro", api_key=API_KEY)
+lite_model = Gemini(model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY)
+flash_model = Gemini(model="gemini-2.5-flash", api_key=GOOGLE_API_KEY)
+pro_model = Gemini(model="gemini-2.5-pro", api_key=GOOGLE_API_KEY)
 
 # Single root agent - full pipeline with Entry → Market → News → Merger
 # root_agent = create_pipeline(model)
@@ -52,7 +60,7 @@ pro_model = Gemini(model="gemini-2.5-pro", api_key=API_KEY)
 # Example: Use Gemini Pro for computationally intensive agents
 # pro_model = Gemini(model="gemini-2.0-flash-001", api_key=API_KEY)
 root_agent = create_pipeline(
-    model,                    # Flash-Lite for Entry/News (simple tasks)
+    lite_model,                    # Flash-Lite for Entry/News (simple tasks)
     market_model=flash_model,   # Flash for Market (8 tools, complex analysis)
     merger_model=flash_model    # Pro for Merger (synthesis, report generation)
 )
