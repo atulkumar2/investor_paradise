@@ -1,6 +1,12 @@
 # Investor Paradise - ADK Web Deployment
 FROM python:3.11-slim
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv for fast dependency management
 RUN pip install uv
 
@@ -11,11 +17,20 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY investor_agent/ ./investor_agent/
 COPY conversations/ ./conversations/
-COPY data/ ./data/
 COPY .env.example ./.env.example
 
 # Install dependencies
 RUN uv sync --frozen
+
+# Download NSE data from GitHub Release
+RUN mkdir -p ./data && \
+    echo "📦 Downloading NSE data from GitHub Release..." && \
+    curl -L https://github.com/atulkumar2/investor_paradise/releases/download/v1.0-data/nse-data.tar.gz \
+    -o nse-data.tar.gz && \
+    echo "📂 Extracting data..." && \
+    tar -xzf nse-data.tar.gz && \
+    rm nse-data.tar.gz && \
+    echo "✅ Data downloaded and extracted"
 
 # Preload NSE data to parquet cache (speeds up first query)
 RUN uv run python -c "from investor_agent.data_engine import NSESTORE; _ = NSESTORE.df; print('✅ Data preloaded to cache')"

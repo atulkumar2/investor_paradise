@@ -8,12 +8,19 @@ This guide helps you quickly run and evaluate the Investor Paradise agent.
 
 ### Option 1: Docker (Recommended - Zero Python Setup)
 
+**Prerequisites:**
+
+- Docker Desktop installed and running ([Download](https://www.docker.com/products/docker-desktop))
+- Google Gemini API key ([Get free key](https://aistudio.google.com/apikey))
+
+**Linux/macOS:**
+
 ```bash
 # 1. Clone the repo
 git clone https://github.com/atulkumar2/investor_paradise.git
 cd investor_paradise
 
-# 2. Run with Docker (replace with your API key)
+# 2. Build and run with Docker
 docker build -t investor-paradise .
 docker run --rm \
   -e GOOGLE_API_KEY="your-gemini-api-key" \
@@ -21,7 +28,35 @@ docker run --rm \
   investor-paradise
 ```
 
+**Windows (PowerShell):**
+
+```powershell
+# 1. Clone the repo
+git clone https://github.com/atulkumar2/investor_paradise.git
+cd investor_paradise
+
+# 2. Ensure Docker Desktop is running (check system tray)
+# Verify: docker version should show both Client and Server
+
+# 3. Build and run with Docker
+docker build -t investor-paradise .
+docker run --rm `
+  -e GOOGLE_API_KEY="your-gemini-api-key" `
+  -p 8000:8000 `
+  investor-paradise
+```
+
 Access at: **<http://localhost:8000>**
+
+**Note:** The Docker image automatically downloads NSE stock data (~1.5GB) from GitHub releases during build. This is a one-time download that gets cached in the image. Build time: ~5-7 minutes depending on internet speed.
+
+**Troubleshooting Docker on Windows:**
+
+- If you see "error during connect: ... dockerDesktopLinuxEngine: The system cannot find the file specified":
+  - Start Docker Desktop from the Start menu
+  - Wait for the Docker icon in system tray to become steady (not animated)
+  - Run `docker version` to verify both Client and Server respond
+  - Docker Desktop can take 30-60 seconds to fully start
 
 ### Option 2: GitHub Codespaces (Browser-Based)
 
