@@ -23,7 +23,7 @@ def _load_sector_map() -> dict[str, str]:
     if _SECTOR_MAP is not None:
         return _SECTOR_MAP
 
-    sector_file = Path(__file__).parent.parent / "data" / "sector_mapping.csv"
+    sector_file = Path(__file__).parent / "sector_mapping.csv"
     try:
         df = pd.read_csv(sector_file)
         _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
