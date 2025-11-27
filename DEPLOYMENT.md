@@ -15,6 +15,20 @@ This guide helps you quickly run and evaluate the Investor Paradise agent.
 
 **Linux/macOS:**
 
+git clone https://github.com/atulkumar2/investor_paradise.git
+cd investor_paradise
+
+docker build -t investor-paradise .
+docker run --rm \
+ -e GOOGLE_API_KEY="your-gemini-api-key" \
+ -p 8000:8000 \
+ investor-paradise
+docker build -t investor-paradise .
+docker run --rm \
+ -e GOOGLE_API_KEY="your-gemini-api-key" \
+ -p 8000:8000 \
+ investor-paradise
+
 ```bash
 # 1. Clone the repo
 git clone https://github.com/atulkumar2/investor_paradise.git
@@ -26,9 +40,24 @@ docker run --rm \
   -e GOOGLE_API_KEY="your-gemini-api-key" \
   -p 8000:8000 \
   investor-paradise
+
+# If you want to use a different local port (e.g., 8001):
+# docker run --rm -e GOOGLE_API_KEY="your-gemini-api-key" -p 8001:8000 investor-paradise
+# Then access at [http://localhost:8001](http://localhost:8001)
 ```
 
 **Windows (PowerShell):**
+
+git clone https://github.com/atulkumar2/investor_paradise.git
+cd investor_paradise
+
+docker build -t investor-paradise .
+docker run --rm `  -e GOOGLE_API_KEY="your-gemini-api-key"`
+-p 8000:8000 `  investor-paradise
+docker build -t investor-paradise .
+docker run --rm`
+-e GOOGLE_API_KEY="your-gemini-api-key" `  -p 8000:8000`
+investor-paradise
 
 ```powershell
 # 1. Clone the repo
@@ -44,9 +73,13 @@ docker run --rm `
   -e GOOGLE_API_KEY="your-gemini-api-key" `
   -p 8000:8000 `
   investor-paradise
+
+# If you want to use a different local port (e.g., 8001):
+# docker run --rm -e GOOGLE_API_KEY="your-gemini-api-key" -p 8001:8000 investor-paradise
+# Then access at [http://localhost:8001](http://localhost:8001)
 ```
 
-Access at: **<http://localhost:8000>**
+Access at: [http://localhost:8000](http://localhost:8000)
 
 **Note:** The Docker image automatically downloads NSE stock data (~1.5GB) from GitHub releases during build. This is a one-time download that gets cached in the image. Build time: ~5-7 minutes depending on internet speed.
 
@@ -57,6 +90,12 @@ Access at: **<http://localhost:8000>**
   - Wait for the Docker icon in system tray to become steady (not animated)
   - Run `docker version` to verify both Client and Server respond
   - Docker Desktop can take 30-60 seconds to fully start
+
+**If the site does not load:**
+
+- Make sure you are mapping the correct ports: use `-p 8000:8000` (or `-p 8001:8000` for local port 8001)
+- The right side (container) must always be 8000, as the app runs on port 8000 inside the container.
+- Open your browser to the local port you mapped (e.g., [http://localhost:8000](http://localhost:8000) or [http://localhost:8001](http://localhost:8001))
 
 ### Option 2: GitHub Codespaces (Browser-Based)
 
