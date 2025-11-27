@@ -94,7 +94,8 @@ def create_pipeline(
             tools.analyze_risk_metrics,
             tools.find_momentum_stocks,
             tools.detect_reversal_candidates,
-            tools.get_volume_price_divergence
+            tools.get_volume_price_divergence,
+            tools.get_newly_listed_symbols
         ]
     )
 
@@ -110,7 +111,8 @@ def create_pipeline(
     merger_agent = LlmAgent(
         name="CIO_Synthesizer",
         model=merger_model,
-        instruction=prompts.MERGER_AGENT_PROMPT
+        instruction=prompts.MERGER_AGENT_PROMPT,
+        output_key="final_report"  # Prevents duplicate display in ADK Web
     )
 
     # 6. Sequential Pipeline - Entry → Market → News → Merger

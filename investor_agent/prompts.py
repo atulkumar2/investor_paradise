@@ -146,9 +146,17 @@ like to explore?",
   "intent": "out_of_scope",
   "should_analyze": false,
   "direct_response": "I specialize in NSE stock market analysis. I can't \
-help with [detected topic], but I'd be happy to analyze stock performance, \
-show top gainers/losers, or research specific companies. What stocks would \
-you like to explore?",
+help with [detected topic].\\n\\n✅ **What I CAN help with:**\\n\\n📊 **Stock \
+Analysis:**\\n• Top gainers/losers over any period\\n• Individual stock \
+performance (RELIANCE, TCS, etc.)\\n• Sector-specific analysis (Banking, IT, \
+Pharma, etc.)\\n• Multi-stock comparisons\\n\\n🔍 **Pattern Detection:**\\n• \
+Volume surge detection\\n• High delivery momentum (institutional buying)\\n• \
+Breakout candidates\\n• 52-week highs/lows\\n• Reversal opportunities\\n\\n📰 \
+**News & Insights:**\\n• Financial news correlation\\n• Market event analysis\
+\\n\\n💡 **Example Queries:**\\n• 'Show top 10 gainers this week'\\n• \
+'Analyze RELIANCE stock'\\n• 'Best banking stocks'\\n• 'Stocks with high \
+delivery percentage'\\n• 'Which new symbols got added recently?'\\n\\nWhat \
+stocks would you like to analyze?",
   "reasoning": "Request is outside stock market analysis domain"
 }
 ```
@@ -275,15 +283,27 @@ quantitative metrics.
 (EntryRouter) in the conversation context.
 
 **If you see output containing `"should_analyze": false`:**
-  - **IMMEDIATELY** return this EXACT JSON (nothing else):
-    {{"symbols": [], "start_date": null, "end_date": null,
-     "top_performers": [], "analysis_summary": "SKIP",
-     "accumulation_patterns": [], "distribution_patterns": [],
-     "risk_flags": [], "focus_areas": []}}
-  - DO NOT use any tools
-  - DO NOT analyze anything
-  - DO NOT add any commentary
-  - Just return the skip JSON above
+  - **IMMEDIATELY** return this EXACT JSON (nothing else, no tools, no analysis):
+```json
+{{
+  "symbols": [],
+  "start_date": null,
+  "end_date": null,
+  "top_performers": [],
+  "analysis_summary": "SKIP",
+  "accumulation_patterns": [],
+  "distribution_patterns": [],
+  "risk_flags": [],
+  "focus_areas": []
+}}
+```
+  
+**CRITICAL:** When returning SKIP JSON:
+- Return ONLY the JSON above - NO other text
+- Do NOT call any tools
+- Do NOT analyze anything
+- Do NOT add markdown code fences
+- Just return raw JSON exactly as shown
   
 **If you see `"should_analyze": true`:**
   - Proceed with stock analysis as normal below
@@ -410,6 +430,9 @@ Query Type → Tool to Use:
   → `detect_reversal_candidates(lookback_days, top_n)`
 - "Divergence" / "Volume vs price"
   → `get_volume_price_divergence(min_divergence, top_n)`
+- "New symbols" / "Newly listed" / "Recent additions" / "IPO" / \
+"Added recently"
+  → `get_newly_listed_symbols(months_back, top_n)`
 - Any query starting with time reference → `check_data_availability()` FIRST
 
 **📌 SECTOR KEYWORDS:** Banking, IT, Auto, Pharma, FMCG, Energy, Metals,
@@ -699,6 +722,38 @@ current rally"}}
 ```
 **How to use:** `result["bearish_divergence"]["stocks"][0]["risk"]` → "High",
 `result["bullish_divergence"]["stocks"][0]["opportunity"]` → "High"
+
+**14. get_newly_listed_symbols() returns:**
+```python
+{{
+  "tool": "get_newly_listed_symbols",
+  "period": {{"months_back": 3, "cutoff_date": "2025-08-27",
+             "data_range": "2024-01-01 to 2025-11-27"}},
+  "newly_listed": [
+    {{"symbol": "NEWSTOCK1", "first_date": "2025-10-15", "days_available": 43,
+     "initial_price": 125.50, "current_price": 142.80, "return_since_listing": 13.78}},
+    {{"symbol": "NEWSTOCK2", "first_date": "2025-09-20", "days_available": 68,
+     "initial_price": 250.00, "current_price": 235.00, "return_since_listing": -6.00}}
+  ],
+  "count": 2,
+  "summary": {{"total_new_symbols": 2, "showing": 2,
+             "avg_return_since_listing": 3.89}}
+}}
+```
+**How to use:** `result["newly_listed"][0]["symbol"]` → "NEWSTOCK1",
+`result["summary"]["avg_return_since_listing"]` → 3.89
+
+**SPECIAL CASE - No New Symbols:**
+If no symbols found in the period, returns:
+```python
+{{
+  "newly_listed": [],
+  "count": 0,
+  "message": "No new symbols found in last 3 months. All symbols existed before \
+2025-08-27."
+}}
+```
+Return analysis_summary explaining no new listings were detected in the period.
 
 ---
 

@@ -1,6 +1,7 @@
 """ Investor Agent - ADK Web Backend Initialization """
 
 import os
+import warnings
 
 import httpx
 from dotenv import load_dotenv
@@ -9,6 +10,8 @@ from google.adk.models.google_llm import Gemini
 from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
 from investor_agent.sub_agents import create_pipeline
+
+warnings.filterwarnings("ignore", message=".*EXPERIMENTAL.*")
 
 logger = get_logger(__name__)
 
@@ -26,11 +29,8 @@ httpx.AsyncClient._init_ = patched_init
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GOOGLE_API_KEY not found. Check .env file.")
-
-
 
 logger.info("🚀 Initializing Web App Backend...")
 
@@ -68,5 +68,14 @@ root_agent = create_pipeline(
 logger.info("✅ Root agent initialized and ready for `adk web`.")
 
 # --- 4. Export for ADK Web Server ---
-# The ADK web command will look for 'root_agent' to instantiate Runner
-# Usage: adk web --agent=investor_agent.agent:root_agent --port=8000
+# The ADK web command expects a directory containing agent subdirectories.
+# Each agent subdirectory must have __init__.py and agent.py with a 'root_agent' export.
+#
+# Usage (from project root):
+#   adk web . --port=8000 --host=0.0.0.0
+#
+# Or to serve only the investor_agent:
+#   adk web investor_agent --port=8000 --host=0.0.0.0
+#
+# The web UI will be available at http://localhost:8000
+# Evaluators can access the chat interface and provide their own API key in Settings.

@@ -1,6 +1,7 @@
 """ Investor Agent - Tools for Stock Market Analysis """
 
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pandas as pd
 
@@ -9,54 +10,41 @@ from investor_agent.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Sector mapping for major Indian stocks
-# This is a simplified mapping - expand as needed
-SECTOR_MAP = {
-    # Banking
-    "HDFCBANK": "Banking", "ICICIBANK": "Banking", "SBIN": "Banking",
-    "AXISBANK": "Banking", "KOTAKBANK": "Banking", "INDUSINDBK": "Banking",
-    "BANDHANBNK": "Banking", "FEDERALBNK": "Banking", "IDFCFIRSTB": "Banking",
-    "PNB": "Banking", "BANKBARODA": "Banking", "CANBK": "Banking",
+# Load sector mapping from CSV
+_SECTOR_MAP: dict[str, str] | None = None
 
-    # IT
-    "TCS": "IT", "INFY": "IT", "WIPRO": "IT", "HCLTECH": "IT",
-    "TECHM": "IT", "LTIM": "IT", "COFORGE": "IT", "MPHASIS": "IT",
 
-    # Auto
-    "MARUTI": "Auto", "M&M": "Auto", "TATAMOTORS": "Auto", "BAJAJ-AUTO": "Auto",
-    "EICHERMOT": "Auto", "HEROMOTOCO": "Auto", "TVSMOTOR": "Auto",
+def _load_sector_map() -> dict[str, str]:
+    """
+    Load sector mapping from CSV file.
+    Cached after first load for performance.
+    """
+    global _SECTOR_MAP
+    if _SECTOR_MAP is not None:
+        return _SECTOR_MAP
 
-    # Pharma
-    "SUNPHARMA": "Pharma", "DRREDDY": "Pharma", "CIPLA": "Pharma",
-    "DIVISLAB": "Pharma", "BIOCON": "Pharma", "AUROPHARMA": "Pharma",
-
-    # FMCG
-    "HINDUNILVR": "FMCG", "ITC": "FMCG", "NESTLEIND": "FMCG",
-    "BRITANNIA": "FMCG", "DABUR": "FMCG", "MARICO": "FMCG",
-
-    # Energy & Oil
-    "RELIANCE": "Energy", "ONGC": "Energy", "BPCL": "Energy",
-    "IOC": "Energy", "HINDPETRO": "Energy", "ADANIGREEN": "Energy",
-
-    # Metals
-    "TATASTEEL": "Metals", "HINDALCO": "Metals", "JSWSTEEL": "Metals",
-    "VEDL": "Metals", "COALINDIA": "Metals", "SAIL": "Metals",
-
-    # Telecom
-    "BHARTIARTL": "Telecom", "IDEA": "Telecom",
-
-    # Financial Services (NBFCs)
-    "BAJFINANCE": "Financial Services", "SHRIRAMFIN": "Financial Services",
-    "CHOLAFIN": "Financial Services", "MUTHOOTFIN": "Financial Services",
-    "LICHSGFIN": "Financial Services", "HDFCLIFE": "Financial Services",
-    "SBILIFE": "Financial Services", "ICICIGI": "Financial Services",
-}
+    sector_file = Path(__file__).parent.parent / "data" / "sector_mapping.csv"
+    try:
+        df = pd.read_csv(sector_file)
+        _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
+        logger.info("Loaded %d sector mappings from %s", len(_SECTOR_MAP), sector_file)
+        return _SECTOR_MAP
+    except (FileNotFoundError, pd.errors.EmptyDataError,
+            pd.errors.ParserError, PermissionError):
+        logger.exception("Failed to load sector mapping from %s", sector_file)
+        # Return empty dict as fallback
+        _SECTOR_MAP = {}
+        return _SECTOR_MAP
 
 
 def get_sector_stocks(sector: str) -> list:
     """Get list of stock symbols for a given sector."""
+    sector_map = _load_sector_map()
     sector_upper = sector.upper()
-    return [symbol for symbol, sec in SECTOR_MAP.items() if sec.upper() == sector_upper]
+    return [
+        symbol for symbol, sec in sector_map.items()
+        if sec.upper() == sector_upper
+    ]
 
 
 def _parse_date(date_str: str | None) -> date | None:
@@ -282,7 +270,8 @@ def get_sector_top_performers(
     sector_stocks = get_sector_stocks(sector)
 
     if not sector_stocks:
-        available_sectors = sorted(set(SECTOR_MAP.values()))
+        sector_map = _load_sector_map()
+        available_sectors = sorted(set(sector_map.values()))
         return {
             "tool": "get_sector_top_performers",
             "error": (
@@ -305,7 +294,7 @@ def get_sector_top_performers(
             return {"tool": "get_sector_top_performers", "error": "No data available"}
 
     # Analyze each stock in the sector
-    
+
     results = []
     for symbol in sector_stocks:
         stock_df = NSESTORE.get_stock_data(symbol, s_date, e_date)
@@ -623,8 +612,6 @@ def compare_stocks(
         else:
             return {"tool": "compare_stocks", "error": "No data available"}
 
-    
-
     results = []
     for symbol in symbols:
         stock_df = NSESTORE.get_stock_data(symbol.upper(), s_date, e_date)
@@ -690,96 +677,6 @@ def get_delivery_momentum(
     start_date: str | None = None,
     end_date: str | None = None,
     min_delivery: float = 50.0
-) -> str:
-    """
-    Find stocks with consistently high delivery percentage (institutional buying).
-
-    Args:
-        start_date: Optional start date in YYYY-MM-DD format
-        end_date: Optional end date in YYYY-MM-DD format
-        min_delivery: Minimum average delivery % threshold (default 50%)
-
-    Returns:
-        List of stocks showing strong institutional interest
-
-    High delivery % (>50%) indicates institutions are taking delivery, not just trading.
-    """
-    _ = NSESTORE.df
-
-    s_date = _parse_date(start_date)
-    e_date = _parse_date(end_date)
-
-    # Default to last 14 days
-    if not s_date or not e_date:
-        if NSESTORE.max_date:
-            e_date = NSESTORE.max_date
-            s_date = e_date - timedelta(days=14)
-        else:
-            return "❌ No data available."
-
-    df = NSESTORE.df
-    mask = (df["DATE"] >= pd.Timestamp(s_date)) & (df["DATE"] <= pd.Timestamp(e_date))
-    filtered = df[mask].copy()
-
-    if filtered.empty:
-        return f"❌ No data found between {s_date} and {e_date}"
-
-    # Calculate average delivery for each stock
-    
-
-    results = []
-    for symbol, group in filtered.groupby("SYMBOL"):
-        stats = MetricsEngine.calculate_period_stats(group)
-        if stats and stats['avg_delivery_pct'] >= min_delivery:
-            stats['symbol'] = symbol
-            results.append(stats)
-
-    if not results:
-        return f"❌ No stocks found with delivery % >= {min_delivery}%"
-
-    # Sort by delivery percentage (highest first)
-    results.sort(key=lambda x: x['avg_delivery_pct'], reverse=True)
-    results = results[:15]  # Top 15
-
-    output = f"""### 🏦 High Delivery Momentum ({s_date} to {e_date})
-
-Stocks with avg delivery ≥ {min_delivery}% (institutional conviction)
-
-| Rank | Symbol | Delivery % | Return % | Price Trend | Signal |
-|------|--------|------------|----------|-------------|--------|
-"""
-
-    for idx, stats in enumerate(results, 1):
-        # Determine signal
-        if stats['return_pct'] > 5 and stats['avg_delivery_pct'] > 60:
-            signal = "🟢 Strong Buy"
-        elif stats['return_pct'] > 0 and stats['avg_delivery_pct'] > 50:
-            signal = "🟢 Accumulation"
-        elif stats['return_pct'] < -5 and stats['avg_delivery_pct'] > 60:
-            signal = "🔴 Distribution"
-        else:
-            signal = "🟡 Watch"
-
-        output += (
-            f"| {idx:2d}   | {stats['symbol']:10s} | "
-            f"{stats['avg_delivery_pct']:5.1f}% | {stats['return_pct']:+6.2f}% | "
-            f"₹{stats['start_price']:.2f}→₹{stats['end_price']:.2f} | "
-            f"{signal} |\n"
-        )
-
-    output += f"\n**Total stocks with high delivery:** {len(results)}\n"
-    output += (
-        "**Interpretation:** High delivery % = Institutions taking positions "
-        "(bullish if price rising)\n"
-    )
-
-    return output
-
-
-def get_delivery_momentum(
-    start_date: str | None = None,
-    end_date: str | None = None,
-    min_delivery: float = 50.0
 ) -> dict:
     """
     Find stocks with consistently high delivery percentage (institutional buying).
@@ -819,8 +716,6 @@ def get_delivery_momentum(
         }
 
     # Calculate average delivery for each stock
-    
-
     results = []
     for symbol, group in filtered.groupby("SYMBOL"):
         stats = MetricsEngine.calculate_period_stats(group)
@@ -1036,9 +931,12 @@ def list_available_tools() -> str:
 1️⃣4️⃣ **get_volume_price_divergence(min_divergence, top_n)**
    └─ Detect bearish/bullish divergence between price and volume
 
+1️⃣5️⃣ **get_newly_listed_symbols(months_back, top_n)**
+   └─ Find symbols that first appeared in dataset (newly listed stocks)
+
 **NEWS & SYNTHESIS**
 
-1️⃣5️⃣ **google_search(query)** [News Agent]
+1️⃣6️⃣ **google_search(query)** [News Agent]
    └─ Search financial news to correlate with price movements
 
 **AVAILABLE SECTORS FOR FILTERING:**
@@ -1206,7 +1104,6 @@ def analyze_risk_metrics(
             "error": f"Insufficient data for {symbol.upper()}"
         }
 
-    
     stats = MetricsEngine.calculate_period_stats(stock_df)
 
     if not stats:
@@ -1363,8 +1260,6 @@ def find_momentum_stocks(
             "error": "No data for momentum analysis"
         }
 
-    
-
     results = []
     for symbol, group in filtered.groupby("SYMBOL"):
         if len(group) < 5:
@@ -1470,8 +1365,6 @@ def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> dict
             "error": "No data for reversal analysis"
         }
 
-    
-
     results = []
     for symbol, group in filtered.groupby("SYMBOL"):
         if len(group) < 10:
@@ -1491,7 +1384,6 @@ def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> dict
             stats['consecutive_ups'] >= 2 and
             stats['volume_trend_pct'] > 10 and
             stats['distance_from_low_pct'] > 5):
-
             stats['symbol'] = symbol
             results.append(stats)
 
@@ -1591,12 +1483,10 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
             "error": "No data for divergence analysis"
         }
 
-    
-
     bearish_div = []  # Price up, volume down
     bullish_div = []  # Price down, volume up
 
-    for symbol, group in filtered.groupby("SYMBOL"):
+    for _, group in filtered.groupby("SYMBOL"):
         if len(group) < 10:
             continue
 
@@ -1663,4 +1553,124 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
             )
         }
     }
-  
+
+
+def get_newly_listed_symbols(months_back: int = 3, top_n: int = 20) -> dict:
+    """
+    Find symbols that first appeared in the dataset within the last N months.
+    This helps identify newly listed stocks or stocks recently added to the
+    dataset.
+
+    Args:
+        months_back: How many months back to look (default 3)
+        top_n: Maximum number of symbols to return (default 20)
+
+    Returns:
+        Dictionary with newly listed symbols and their first appearance dates
+
+    Example:
+        >>> get_newly_listed_symbols(months_back=3, top_n=10)
+        {
+            "tool": "get_newly_listed_symbols",
+            "period": {"months_back": 3, "cutoff_date": "2024-08-27"},
+            "newly_listed": [
+                {
+                    "symbol": "NEWSTOCK",
+                    "first_date": "2024-10-15",
+                    "days_available": 43,
+                    "initial_price": 125.50
+                }
+            ],
+            "count": 1
+        }
+    """
+    _ = NSESTORE.df  # Ensure data loaded
+
+    if not NSESTORE.max_date:
+        return {"error": "No data available", "newly_listed": [], "count": 0}
+
+    # Calculate cutoff date (N months back from latest data)
+    cutoff_date = NSESTORE.max_date - timedelta(days=months_back * 30)
+
+    df = NSESTORE.df
+
+    # Find first appearance date for each symbol
+    first_dates = df.groupby("SYMBOL")["DATE"].min().reset_index()
+    first_dates.columns = ["SYMBOL", "FIRST_DATE"]
+
+    # Filter symbols that first appeared after cutoff
+    new_symbols = first_dates[
+        first_dates["FIRST_DATE"] >= pd.Timestamp(cutoff_date)
+    ].copy()
+
+    if new_symbols.empty:
+        return {
+            "tool": "get_newly_listed_symbols",
+            "period": {
+                "months_back": months_back,
+                "cutoff_date": str(cutoff_date)
+            },
+            "newly_listed": [],
+            "count": 0,
+            "message": (
+                f"No new symbols found in last {months_back} months. "
+                f"All symbols existed before {cutoff_date}."
+            )
+        }
+
+    # Sort by first appearance date (newest first)
+    new_symbols = new_symbols.sort_values("FIRST_DATE", ascending=False)
+
+    # Get initial price for each symbol
+    results = []
+    for _, row in new_symbols.head(top_n).iterrows():
+        symbol = row["SYMBOL"]
+        first_date = row["FIRST_DATE"]
+
+        # Get first day's data
+        symbol_data = df[
+            (df["SYMBOL"] == symbol) & (df["DATE"] == first_date)
+        ].iloc[0]
+
+        days_available = (NSESTORE.max_date - first_date.date()).days
+
+        results.append({
+            "symbol": symbol,
+            "first_date": str(first_date.date()),
+            "days_available": int(days_available),
+            "initial_price": round(float(symbol_data["CLOSE"]), 2),
+            "current_price": round(
+                float(df[df["SYMBOL"] == symbol].iloc[-1]["CLOSE"]), 2
+            ),
+            "return_since_listing": round(
+                (
+                    (df[df["SYMBOL"] == symbol].iloc[-1]["CLOSE"]
+                     - symbol_data["CLOSE"])
+                    / symbol_data["CLOSE"]
+                ) * 100,
+                2
+            )
+        })
+
+    return {
+        "tool": "get_newly_listed_symbols",
+        "period": {
+            "months_back": months_back,
+            "cutoff_date": str(cutoff_date),
+            "data_range": f"{NSESTORE.min_date} to {NSESTORE.max_date}"
+        },
+        "newly_listed": results,
+        "count": len(results),
+        "summary": {
+            "total_new_symbols": len(new_symbols),
+            "showing": len(results),
+            "avg_return_since_listing": (
+                round(
+                    sum(r["return_since_listing"] for r in results)
+                    / len(results),
+                    2
+                )
+                if results else 0
+            )
+        }
+    }

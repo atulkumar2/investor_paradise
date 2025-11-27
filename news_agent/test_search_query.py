@@ -142,7 +142,8 @@ def semantic_search(
             continue
         documents = results["documents"][0]  # type: ignore[index]
         metadatas = results["metadatas"][0]  # type: ignore[index]
-        scores_or_distances = results.get("distances", results.get("scores", [[]]))[0]  # type: ignore[index]
+        scores_or_distances = results.get("distances", 
+                  results.get("scores", [[]]))[0]  # type: ignore[index]
         for doc, meta, score in zip(
             documents,
             metadatas,

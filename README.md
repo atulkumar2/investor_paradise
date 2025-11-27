@@ -130,6 +130,39 @@ Both use the same agent pipeline and data—choose based on your workflow.
 
 ---
 
+## 🎬 Quick Demo for Evaluators
+
+**Zero-config run in 3 commands:**
+
+```bash
+# 1. Set your API key
+export GOOGLE_API_KEY="your-key-here"
+
+# 2. Install dependencies
+uv sync
+
+# 3. Start the web UI
+adk web investor_agent --port=8000 --host=0.0.0.0
+```
+
+Access at: <http://localhost:8000>
+
+**Or use the CLI for instant testing:**
+
+```bash
+python main.py
+```
+
+**Provide your own API key via ADK Web UI:**
+
+1. Click **Settings** (⚙️) → **Providers** → **Google (Gemini)**
+2. Paste your [free API key](https://aistudio.google.com/apikey)
+3. Save and start chatting
+
+📖 **Full deployment guide**: See [DEPLOYMENT.md](DEPLOYMENT.md) for Docker, cloud hosting, and advanced options.
+
+---
+
 ## Prerequisites
 
 - **Python 3.11+** (required for modern typing features)
@@ -274,8 +307,11 @@ If you have existing NSE data or prefer manual download:
 **Best for**: Interactive exploration, multi-turn conversations, visual analysis
 
 ```bash
-# Start the ADK web server
+# Start the ADK web server (serve all agents in the project)
 adk web . --log_level INFO
+
+# Or serve only the investor_agent
+adk web investor_agent --log_level INFO
 
 # Output:
 # 🚀 Starting ADK web server...

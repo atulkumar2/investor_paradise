@@ -1,11 +1,10 @@
 [MASTER]
-ignore = .venv,venv
+ignore = .venv,venv,data
 
 [MESSAGES CONTROL]
 # Disable indentation-related checks to avoid conflicts with formatter
 disable =
 	bad-indentation,
-	wrong-hanging-indentation,
 	C0330
 
 [FORMAT]
