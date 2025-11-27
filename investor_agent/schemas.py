@@ -34,7 +34,7 @@ class StockPerformance(BaseModel):
     return_pct: float = Field(description="Percentage return over the analysis period")
     price_start: float = Field(description="Starting price in INR")
     price_end: float = Field(description="Ending price in INR")
-    volatility: float = Field(description="Daily return standard deviation as percentage")
+    volatility: Optional[float] = Field(None, description="Daily return standard deviation as percentage (None if not calculated)")
     delivery_pct: Optional[float] = Field(None, description="Average delivery percentage (institutional buying indicator)")
 
 
@@ -90,6 +90,18 @@ class NewsInsight(BaseModel):
     symbol: str = Field(description="Stock symbol")
     sentiment: str = Field(description="Positive, Negative, or Neutral")
     key_event: str = Field(description="Brief description of the main news event (or 'No significant news')")
+    event_type: Optional[str] = Field(
+        None,
+        description="Category of event: 'Earnings', 'M&A', 'Block Deal', 'SEBI Action', 'Corporate Action', 'Analyst Rating', 'Sector', 'Macro', 'Circuit', or 'None'"
+    )
+    news_date: Optional[str] = Field(
+        None,
+        description="Exact date of news event in YYYY-MM-DD format (if found)"
+    )
+    corporate_action: Optional[str] = Field(
+        None,
+        description="Corporate action details if applicable (e.g., '2:1 Bonus', '1:10 Split', 'Rs 5 Dividend')"
+    )
     source: Optional[str] = Field(None, description="News source and date")
     correlation: str = Field(
         description="How news correlates with price move: 'Strong Confirmation', 'Divergence', or 'Weak'"
