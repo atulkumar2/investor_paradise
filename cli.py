@@ -15,7 +15,10 @@ from google.adk.sessions import DatabaseSessionService
 from google.genai import types
 
 from investor_agent.data_engine import NSESTORE
+from investor_agent.logger import get_logger
 from investor_agent.sub_agents import create_pipeline
+
+logger = get_logger(__name__)
 
 # --- SSL Patch (Required for your environment) ---
 original_init = httpx.AsyncClient.__init__
@@ -58,8 +61,10 @@ def cleanup_old_sessions(db_path: str, days: int = 7):
 
         if deleted_count > 0:
             print(f"🗑️  Cleaned up {deleted_count} session(s) older than {days} days")
+            logger.info("Cleaned up %d session(s) older than %d days", deleted_count, days)
     except Exception as e:
         print(f"⚠️  Session cleanup warning: {e}")
+        logger.warning("Session cleanup warning: %s", e)
 
 async def main():
     """CLI Entry Point: Run the Investor Paradise Agent"""
@@ -67,10 +72,12 @@ async def main():
     # 0. Welcome
     print("\n🚀 Welcome to Investor Paradise Agent! 🚀")
     print("🚀 Initializing  Investor Paradise...")
+    logger.info("Starting Investor Paradise CLI Agent")
 
     # 1. Pre-load Data to establish date context
     _ = NSESTORE.df
     print(f"📅 Database Context: {NSESTORE.get_data_context()}")
+    logger.info("Data loaded: %s", NSESTORE.get_data_context())
 
     # 2. Initialize Model & Root Agent (single pipeline)
     # Default: Use Flash-Lite for all agents (fast, cost-effective)
@@ -109,14 +116,17 @@ async def main():
     )
 
     print("\n💬 Ready! Ask me about NSE stocks or just say hi! (Type 'exit' to quit)\n")
+    logger.info("CLI ready for user input")
 
     while True:
         try:
             user_input = input("You: ")
             if user_input.lower() in ["exit", "quit", "bye"]:
                 print("👋 Goodbye! Happy investing!")
+                logger.info("User exited CLI")
                 break
 
+            logger.info("User query: %s", user_input)
             print("🔍 Processing...\n")
 
             user_message = types.Content(
@@ -139,9 +149,12 @@ async def main():
 
         except KeyboardInterrupt:
             print("\n👋 Goodbye! Happy investing!")
+            logger.info("User terminated session via KeyboardInterrupt")
             break
         except Exception as e:
+            error_msg = f"Error during agent execution: {e}"
             print(f"❌ Error: {e}")
+            logger.error(error_msg, exc_info=True)
             traceback.print_exc()
 
 if __name__ == "__main__":

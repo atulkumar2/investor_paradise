@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from google.adk.models.google_llm import Gemini
 
 from investor_agent.data_engine import NSESTORE
+
+# CRITICAL: Import logger FIRST to configure root logging before any libraries
 from investor_agent.logger import get_logger
 from investor_agent.sub_agents import create_pipeline
 

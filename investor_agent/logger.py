@@ -14,12 +14,29 @@ for log_file in ["logger.log", "web.log", "tunnel.log"]:
 _LOG_FILE = "investor_agent_logger.log"
 
 # Configure root logging to write to the log file if not already configured.
+# This captures ALL logs including ADK, Google GenAI, and third-party libraries.
 if not logging.getLogger().handlers:
     logging.basicConfig(
         filename=_LOG_FILE,
-        level=logging.DEBUG,
-        format="%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s",
+        level=logging.INFO,  # Set to INFO to avoid excessive DEBUG from libraries
+        format="%(asctime)s - %(levelname)s - %(name)s:%(lineno)s - %(message)s",
     )
+else:
+    # If handlers exist, ensure root logger writes to our file too
+    root_logger = logging.getLogger()
+    has_root_file = any(
+        isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None)
+        and os.path.basename(h.baseFilename) == os.path.basename(_LOG_FILE)
+        for h in root_logger.handlers
+    )
+    if not has_root_file:
+        root_fh = logging.FileHandler(_LOG_FILE, encoding="utf-8")
+        root_fh.setLevel(logging.INFO)
+        root_fh.setFormatter(logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(name)s:%(lineno)s - %(message)s"
+        ))
+        root_logger.addHandler(root_fh)
+        root_logger.setLevel(logging.INFO)
 
 
 def get_logger(name: str):
@@ -46,10 +63,10 @@ def get_logger(name: str):
         fh.setFormatter(fmt)
         logger.addHandler(fh)
 
-    # Attach a stream handler that safely writes UTF-8 (replace unencodable chars).
+    # Attach a stream handler that safely writes UTF-8 (replace not encodable chars).
     has_stream = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
     if not has_stream:
-        # Wrap stdout buffer with TextIOWrapper that encodes to utf-8 and replaces errors
+        # Wrap stdout buffer with TextIOWrapper tht encodes to utf-8 and replaces errors
         try:
             utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, 
                           encoding="utf-8", errors="replace", line_buffering=True)

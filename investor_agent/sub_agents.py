@@ -9,6 +9,9 @@ from google.adk.tools import google_search
 
 from investor_agent import prompts, schemas, tools
 from investor_agent.data_engine import NSESTORE
+from investor_agent.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_pipeline(
@@ -54,8 +57,13 @@ def create_pipeline(
     news_model = news_model or default_model
     merger_model = merger_model or default_model
 
+    logger.info(
+      "🔧 Creating agent pipeline with models: entry=%s, market=%s, news=%s, merger=%s",
+                entry_model, market_model, news_model, merger_model)
+
     # 1. Get Data Context String
     context_str = NSESTORE.get_data_context()
+    logger.debug("📊 Data context loaded for agents")
 
     # 2. Entry/Router Agent - First point of contact
     entry_agent = LlmAgent(
@@ -79,11 +87,19 @@ def create_pipeline(
             # Utility
             tools.list_available_tools,
             tools.check_data_availability,
+            tools.list_available_indices,
+            tools.get_index_constituents,
+            tools.get_stocks_by_market_cap,
+            tools.get_market_cap_category,
+            tools.get_sectoral_indices,
+            tools.get_stocks_by_sector_index,
             # Phase 1: Core Analysis Tools
             tools.get_top_gainers,
             tools.get_top_losers,
             tools.analyze_stock,
             tools.get_sector_top_performers,
+            tools.get_index_top_performers,
+            tools.get_market_cap_performers,
             # Phase 2: Advanced Analysis Tools
             tools.detect_volume_surge,
             tools.compare_stocks,
@@ -123,4 +139,5 @@ def create_pipeline(
 Final Report"
     )
 
+    logger.info("✅ Agent pipeline created with 4 sequential agents")
     return pipeline

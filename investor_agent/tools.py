@@ -1,50 +1,56 @@
 """ Investor Agent - Tools for Stock Market Analysis """
 
 from datetime import date, datetime, timedelta
-from pathlib import Path
 
 import pandas as pd
 
 from investor_agent.data_engine import NSESTORE, MetricsEngine
+
+# Import and re-export indices and classification utilities
+from investor_agent.indices_utils import (
+    _load_sector_map,
+    get_index_constituents,
+    get_market_cap_category,
+    get_sector_from_index,
+    get_sector_stocks,
+    get_sectoral_indices,
+    get_stocks_by_market_cap,
+    get_stocks_by_sector_index,
+    list_available_indices,
+)
 from investor_agent.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Load sector mapping from CSV
-_SECTOR_MAP: dict[str, str] | None = None
-
-
-def _load_sector_map() -> dict[str, str]:
-    """
-    Load sector mapping from CSV file.
-    Cached after first load for performance.
-    """
-    global _SECTOR_MAP
-    if _SECTOR_MAP is not None:
-        return _SECTOR_MAP
-
-    sector_file = Path(__file__).parent / "sector_mapping.csv"
-    try:
-        df = pd.read_csv(sector_file)
-        _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
-        logger.info("Loaded %d sector mappings from %s", len(_SECTOR_MAP), sector_file)
-        return _SECTOR_MAP
-    except (FileNotFoundError, pd.errors.EmptyDataError,
-            pd.errors.ParserError, PermissionError):
-        logger.exception("Failed to load sector mapping from %s", sector_file)
-        # Return empty dict as fallback
-        _SECTOR_MAP = {}
-        return _SECTOR_MAP
-
-
-def get_sector_stocks(sector: str) -> list:
-    """Get list of stock symbols for a given sector."""
-    sector_map = _load_sector_map()
-    sector_upper = sector.upper()
-    return [
-        symbol for symbol, sec in sector_map.items()
-        if sec.upper() == sector_upper
-    ]
+# Re-export for backward compatibility
+__all__ = [
+    'get_index_constituents',
+    'list_available_indices',
+    'get_sectoral_indices',
+    'get_sector_from_index',
+    'get_stocks_by_sector_index',
+    'get_stocks_by_market_cap',
+    'get_market_cap_category',
+    'get_sector_stocks',
+    'check_data_availability',
+    'get_top_gainers',
+    'get_top_losers',
+    'get_sector_top_performers',
+    'get_market_cap_performers',
+    'get_index_top_performers',
+    'analyze_stock',
+    'detect_volume_surge',
+    'compare_stocks',
+    'get_delivery_momentum',
+    'detect_breakouts',
+    'list_available_tools',
+    'get_52week_high_low',
+    'analyze_risk_metrics',
+    'find_momentum_stocks',
+    'detect_reversal_candidates',
+    'get_volume_price_divergence',
+    'get_newly_listed_symbols',
+]
 
 
 def _parse_date(date_str: str | None) -> date | None:
@@ -62,6 +68,34 @@ def _parse_date(date_str: str | None) -> date | None:
         return None
 
 
+def _get_date_range(
+    start_date: str | None,
+    end_date: str | None
+) -> tuple[date, date, bool]:
+    """
+    Parse and validate date range, providing defaults if needed.
+
+    Returns:
+        Tuple of (start_date, end_date, dates_defaulted)
+    """
+    s_date = _parse_date(start_date)
+    e_date = _parse_date(end_date)
+
+    dates_defaulted = False
+    if not s_date or not e_date:
+        if NSESTORE.max_date:
+            e_date = NSESTORE.max_date
+            s_date = e_date - timedelta(days=7)
+            dates_defaulted = True
+        else:
+            # Fallback to current date
+            e_date = date.today()
+            s_date = e_date - timedelta(days=7)
+            dates_defaulted = True
+
+    return s_date, e_date, dates_defaulted
+
+
 def check_data_availability() -> str:
     """
     Returns the start and end dates of the available data in the database.
@@ -71,10 +105,14 @@ def check_data_availability() -> str:
     - What 'Today', 'Yesterday', or 'Last Week' means in context of this data
     - The actual date range you can query
     """
+    logger.info("🔍 Checking data availability")
     # Trigger load if not loaded
     _ = NSESTORE.df
 
     if NSESTORE.min_date and NSESTORE.max_date:
+        logger.info("📊 Data available from %s to %s (%d symbols, %d records)",
+                   NSESTORE.min_date, NSESTORE.max_date,
+                   NSESTORE.total_symbols, len(NSESTORE.df))
         return f"""Data Availability Report:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📅 Start Date: {NSESTORE.min_date}
@@ -106,6 +144,8 @@ def get_top_gainers(
 
     If dates are not provided, defaults to the last 7 days of available data.
     """
+    logger.info("📈 get_top_gainers called: start=%s, end=%s, top_n=%d",
+               start_date or "auto", end_date or "auto", top_n)
     _ = NSESTORE.df  # Ensure data loaded
 
     s_date = _parse_date(start_date)
@@ -126,11 +166,15 @@ def get_top_gainers(
     ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=top_n, metric="return")
 
     if ranked.empty:
+        logger.warning("⚠️  No data found for period %s to %s", s_date, e_date)
         return {
             "error": f"No data found between {s_date} and {e_date}",
             "gainers": [],
             "period": {"start": str(s_date), "end": str(e_date)}
         }
+
+    logger.info("✅ Found %d top gainers for period %s to %s (avg return: %.2f%%)",
+               len(ranked), s_date, e_date, ranked['return_pct'].mean())
 
     # Build structured output
     return {
@@ -183,6 +227,8 @@ def get_top_losers(
 
     If dates are not provided, defaults to the last 7 days of available data.
     """
+    logger.info("📉 get_top_losers called: start=%s, end=%s, top_n=%d",
+               start_date or "auto", end_date or "auto", top_n)
     _ = NSESTORE.df  # Ensure data loaded
 
     s_date = _parse_date(start_date)
@@ -203,6 +249,7 @@ def get_top_losers(
     all_ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=1000, metric="return")
 
     if all_ranked.empty:
+        logger.warning("⚠️  No data found for period %s to %s", s_date, e_date)
         return {
             "error": f"No data found between {s_date} and {e_date}",
             "losers": [],
@@ -211,6 +258,9 @@ def get_top_losers(
 
     # Get bottom performers
     losers = all_ranked.tail(top_n).sort_values("return_pct")
+
+    logger.info("✅ Found %d top losers for period %s to %s (avg return: %.2f%%)",
+               len(losers), s_date, e_date, losers['return_pct'].mean())
 
     return {
         "tool": "get_top_losers",
@@ -266,8 +316,10 @@ def get_sector_top_performers(
     Available sectors: Banking, IT, Auto, Pharma, FMCG, Energy, Metals,
                       Telecom, Financial Services
     """
-    # Get stocks in this sector
-    sector_stocks = get_sector_stocks(sector)
+    logger.info("🏭 get_sector_top_performers called: sector=%s, top_n=%d",
+                sector, top_n)
+    # Get stocks for this sector
+    sector_stocks = get_sector_stocks(sector)  # Use legacy sector mapping
 
     if not sector_stocks:
         sector_map = _load_sector_map()
@@ -314,6 +366,10 @@ def get_sector_top_performers(
     results.sort(key=lambda x: x['return_pct'], reverse=True)
     results = results[:top_n]
 
+    logger.info("✅ Found %d top performers in %s sector (avg return: %.2f%%)",
+               len(results), sector,
+               sum(r['return_pct'] for r in results) / len(results))
+
     return {
         "tool": "get_sector_top_performers",
         "sector": sector,
@@ -344,6 +400,239 @@ def get_sector_top_performers(
             ),
             "stocks_analyzed": len(results),
             "total_sector_stocks": len(sector_stocks),
+            "top_symbol": results[0]['symbol'],
+            "top_return": round(float(results[0]['return_pct']), 2)
+        }
+    }
+
+
+def get_market_cap_performers(
+    market_cap: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    top_n: int = 10,
+    sort_by: str = "return_pct"
+) -> dict:
+    """
+    Get top or worst performing stocks by market cap category.
+
+    Args:
+        market_cap: "LARGE", "MID", or "SMALL"
+        start_date: Start date (YYYY-MM-DD). Defaults to 30 days ago
+        end_date: End date (YYYY-MM-DD). Defaults to latest
+        top_n: Number of stocks to return (default 10)
+        sort_by: Metric to sort by - "return_pct" (default) or "volatility"
+
+    Returns:
+        Dictionary with performers, period info, and summary
+
+    Example:
+        >>> get_market_cap_performers("SMALL", top_n=5)
+        {
+            "market_cap": "SMALL",
+            "period": {"start": "2025-10-27", "end": "2025-11-27"},
+            "performers": [
+                {"rank": 1, "symbol": "ABC", "return_pct": 45.2, ...},
+                ...
+            ],
+            "summary": {"avg_return": 12.3, "stocks_analyzed": 5}
+        }
+    """
+    logger.info(
+      "💼 get_market_cap_performers called: market_cap=%s, top_n=%d, sort_by=%s",
+               market_cap.upper(), top_n, sort_by)
+    # Get stocks in this market cap category
+    cap_stocks = get_stocks_by_market_cap(market_cap)
+
+    if not cap_stocks:
+        return {
+            "tool": "get_market_cap_performers",
+            "error": f"Invalid market_cap '{market_cap}'. Use LARGE, MID, or SMALL",
+            "performers": []
+        }
+
+    _ = NSESTORE.df
+    s_date = _parse_date(start_date)
+    e_date = _parse_date(end_date)
+
+    dates_defaulted = False
+    if not s_date or not e_date:
+        if NSESTORE.max_date:
+            e_date = NSESTORE.max_date
+            s_date = e_date - timedelta(days=30)
+            dates_defaulted = True
+        else:
+            return {"tool": "get_market_cap_performers", "error": "No data available"}
+
+    # Analyze each stock
+    results = []
+    for symbol in cap_stocks:
+        stock_df = NSESTORE.get_stock_data(symbol, s_date, e_date)
+        if not stock_df.empty:
+            stats = MetricsEngine.calculate_period_stats(stock_df)
+            if stats:
+                stats['symbol'] = symbol
+                results.append(stats)
+
+    if not results:
+        return {
+            "tool": "get_market_cap_performers",
+            "error": f"No data found for {market_cap} cap stocks between {s_date} and {e_date}",
+            "performers": []
+        }
+
+    # Sort by requested metric
+    reverse = True  # Higher is better for return_pct
+    def _sort_by_volatility(x):
+        return x.get('volatility', 0)
+
+    def _sort_by_return(x):
+        return x.get('return_pct', 0)
+
+    if sort_by == "volatility":
+        sort_key = _sort_by_volatility
+    else:
+        sort_key = _sort_by_return
+
+    results.sort(key=sort_key, reverse=reverse)
+    results = results[:top_n]
+
+    logger.info("✅ Found %d %s-cap performers, avg return: %.2f%%",
+               len(results), market_cap.upper(),
+               sum(r['return_pct'] for r in results) / len(results))
+
+    return {
+        "tool": "get_market_cap_performers",
+        "market_cap": market_cap.upper(),
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "performers": [
+            {
+                "rank": idx + 1,
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2),
+                "price_start": round(float(stats['start_price']), 2),
+                "price_end": round(float(stats['end_price']), 2),
+                "volatility": round(float(stats['volatility']), 2),
+                "delivery_pct": (
+                    round(float(stats['avg_delivery_pct']), 1)
+                    if stats['avg_delivery_pct'] else None
+                )
+            }
+            for idx, stats in enumerate(results)
+        ],
+        "summary": {
+            "avg_return": round(
+                sum(s['return_pct'] for s in results) / len(results), 2
+            ),
+            "stocks_analyzed": len(results),
+            "total_cap_stocks": len(cap_stocks),
+            "top_symbol": results[0]['symbol'],
+            "top_return": round(float(results[0]['return_pct']), 2)
+        }
+    }
+
+
+def get_index_top_performers(
+    index_name: str,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    top_n: int = 10
+) -> dict:
+    """
+    Get top performing stocks from a specific NSE index.
+
+    Args:
+        index_name: Index name (NIFTY50, NIFTY100, NIFTYBANK, etc.)
+        start_date: Start date (YYYY-MM-DD). Defaults to 7 days ago
+        end_date: End date (YYYY-MM-DD). Defaults to latest available
+        top_n: Number of top performers to return (default 10)
+
+    Returns:
+        Dictionary with index_name, period info, and top performers list
+
+    Example:
+        >>> get_index_top_performers("NIFTY50", top_n=5)
+        {
+            "index": "NIFTY50",
+            "period": {"start": "2025-11-20", "end": "2025-11-27", "days": 5},
+            "performers": [
+                {"rank": 1, "symbol": "RELIANCE", "return_pct": 5.2, ...},
+                ...
+            ]
+        }
+    """
+    # Get index constituents
+    index_stocks = get_index_constituents(index_name)
+
+    if not index_stocks:
+        available = ", ".join(list(list_available_indices().keys())[:10])
+        return {
+            "error": f"Index '{index_name}' not found",
+            "available_indices": available,
+            "performers": []
+        }
+
+    # Parse dates
+    s_date, e_date, dates_defaulted = _get_date_range(start_date, end_date)
+
+    # Analyze each stock in the index
+    results = []
+    for symbol in index_stocks:
+        stock_data = NSESTORE.get_stock_data(symbol, s_date, e_date)
+        if not stock_data.empty:
+            stats = MetricsEngine.calculate_period_stats(stock_data)
+            if stats:
+                stats['symbol'] = symbol
+                results.append(stats)
+
+    if not results:
+        return {
+            "error": f"No data available for {index_name} constituents",
+            "index": index_name,
+            "period": {"start": str(s_date), "end": str(e_date)},
+            "performers": []
+        }
+
+    # Sort by return and take top N
+    results.sort(key=lambda x: x['return_pct'], reverse=True)
+    results = results[:top_n]
+
+    return {
+        "tool": "get_index_top_performers",
+        "index": index_name,
+        "index_size": len(index_stocks),
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "performers": [
+            {
+                "rank": idx + 1,
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2),
+                "price_start": round(float(stats['start_price']), 2),
+                "price_end": round(float(stats['end_price']), 2),
+                "volatility": round(float(stats['volatility']), 2),
+                "delivery_pct": (
+                    round(float(stats['avg_delivery_pct']), 1)
+                    if stats['avg_delivery_pct'] else None
+                )
+            }
+            for idx, stats in enumerate(results)
+        ],
+        "summary": {
+            "index_avg_return": round(
+                sum(s['return_pct'] for s in results) / len(results), 2
+            ),
+            "stocks_analyzed": len(results),
+            "total_index_stocks": len(index_stocks),
             "top_symbol": results[0]['symbol'],
             "top_return": round(float(results[0]['return_pct']), 2)
         }
@@ -387,6 +676,8 @@ def analyze_stock(
     stock_df = NSESTORE.get_stock_data(symbol.upper(), s_date, e_date)
 
     if stock_df.empty:
+        logger.warning("⚠️  No data found for %s between %s and %s",
+                      symbol.upper(), s_date, e_date)
         return {
             "tool": "analyze_stock",
             "error": f"No data found for {symbol.upper()} between {s_date} and {e_date}"
@@ -396,10 +687,14 @@ def analyze_stock(
     stats = MetricsEngine.calculate_period_stats(stock_df)
 
     if not stats:
+        logger.warning("⚠️  Insufficient data to analyze %s", symbol.upper())
         return {
             "tool": "analyze_stock",
             "error": f"Insufficient data to analyze {symbol.upper()}"
         }
+
+    logger.debug("📊 Calculated stats for %s: return=%.2f%%, volatility=%.2f",
+                symbol.upper(), stats['return_pct'], stats['volatility'])
 
     # Calculate additional metrics
     price_range_pct = (
@@ -445,6 +740,10 @@ def analyze_stock(
     else:
         trend = "SIDEWAYS"
         trend_detail = "Mixed signals"
+
+    logger.info(
+      "✅ Analyzed %s for period %s to %s: return=%.2f%%, verdict=%s, trend=%s",
+               symbol.upper(), s_date, e_date, stats['return_pct'], verdict, trend)
 
     return {
         "tool": "analyze_stock",
@@ -516,6 +815,8 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
         significantly higher than average
         (indicates potential breakout, news event, or institutional activity)
     """
+    logger.info("📊 detect_volume_surge called for symbol=%s, lookback_days=%d",
+               symbol.upper(), lookback_days)
     _ = NSESTORE.df
 
     if not NSESTORE.max_date:
@@ -563,6 +864,9 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
         verdict = "NORMAL"
         interpretation = "Volume within typical range"
 
+    logger.info("✅ Volume surge for %s: %.1f%% change, verdict=%s",
+               symbol.upper(), surge_pct, verdict)
+
     return {
         "tool": "detect_volume_surge",
         "symbol": symbol.upper(),
@@ -598,6 +902,8 @@ def compare_stocks(
 
     If dates not provided, uses last 30 days.
     """
+    logger.info("🔀 compare_stocks called for %d symbols: %s",
+               len(symbols), ', '.join(s.upper() for s in symbols[:5]))
     _ = NSESTORE.df
 
     s_date = _parse_date(start_date)
@@ -794,6 +1100,8 @@ def detect_breakouts(
     Returns:
         Dictionary with list of stocks showing price breakouts and strong momentum
     """
+    logger.info("🚀 detect_breakouts called: threshold=%.1f%%, start=%s, end=%s",
+               threshold, start_date or "auto", end_date or "auto")
     _ = NSESTORE.df
 
     s_date = _parse_date(start_date)
@@ -853,6 +1161,9 @@ def detect_breakouts(
             "quality": quality
         })
 
+    logger.info("✅ Found %d breakout candidates (avg return: %.2f%%)",
+               len(breakouts), sum(b['return_pct'] for b in breakouts) / len(breakouts))
+
     return {
         "tool": "detect_breakouts",
         "period": {
@@ -888,56 +1199,99 @@ def list_available_tools() -> str:
 1️⃣ **check_data_availability()**
    └─ Get date range and database statistics
 
-2️⃣ **get_top_gainers(start_date, end_date, top_n)**
+2️⃣ **list_available_indices()** 🆕
+   └─ List all NSE indices and their constituent counts
+
+3️⃣ **get_index_constituents(index_name)** 🆕
+   └─ Get list of stocks in a specific index (NIFTY50, NIFTY100, etc.)
+
+4️⃣ **get_sectoral_indices()** 🆕
+   └─ Get mapping of sectors to NSE sectoral indices
+
+5️⃣ **get_stocks_by_sector_index(sector)** 🆕
+   └─ Get stocks from NSE sectoral index (Banking, IT, Auto, Pharma, etc.)
+
+6️⃣ **get_stocks_by_market_cap(market_cap)** 🆕
+   └─ Get stocks by category: "LARGE", "MID", or "SMALL" cap
+
+7️⃣ **get_market_cap_category(symbol)** 🆕
+   └─ Get market cap category for a specific stock symbol
+
+8️⃣ **get_top_gainers(start_date, end_date, top_n)**
    └─ Find best performing stocks by return %
 
-3️⃣ **get_top_losers(start_date, end_date, top_n)**
+9️⃣ **get_top_losers(start_date, end_date, top_n)**
    └─ Find worst performing stocks by return %
 
-4️⃣ **get_sector_top_performers(sector, start_date, end_date, top_n)** 🆕
+🔟 **get_sector_top_performers(sector, start_date, end_date, top_n)**
    └─ Get top stocks from specific sector (Banking, IT, Auto, Pharma, FMCG, etc.)
 
-5️⃣ **analyze_stock(symbol, start_date, end_date)**
+1️⃣1️⃣ **get_index_top_performers(index_name, start_date, end_date, top_n)** 🆕
+   └─ Get top performers from NSE index (NIFTY50, NIFTYBANK, etc.)
+
+1️⃣2️⃣ **get_market_cap_performers(market_cap, start_date, end_date, top_n)** 🆕
+   └─ Get top/worst performers by market cap (LARGE/MID/SMALL)
+
+1️⃣3️⃣ **analyze_stock(symbol, start_date, end_date)**
    └─ Deep-dive analysis of individual stock with comprehensive metrics
 
 **PHASE 2: Advanced Pattern Detection**
 
-6️⃣ **detect_volume_surge(symbol, lookback_days)**
+1️⃣4️⃣ **detect_volume_surge(symbol, lookback_days)**
    └─ Identify unusual volume activity (potential breakouts/news events)
 
-7️⃣ **compare_stocks(symbols, start_date, end_date)**
+1️⃣5️⃣ **compare_stocks(symbols, start_date, end_date)**
    └─ Side-by-side comparison of multiple stocks
 
-8️⃣ **get_delivery_momentum(start_date, end_date, min_delivery)**
+1️⃣6️⃣ **get_delivery_momentum(start_date, end_date, min_delivery)**
    └─ Find stocks with high institutional buying (delivery %)
 
-9️⃣ **detect_breakouts(start_date, end_date, threshold)**
+1️⃣7️⃣ **detect_breakouts(start_date, end_date, threshold)**
    └─ Identify momentum stocks breaking out with strong signals
 
 **PHASE 3: Professional Trading Tools**
 
-🔟 **get_52week_high_low(symbols, top_n)**
+1️⃣8️⃣ **get_52week_high_low(symbols, top_n)**
    └─ Find stocks near 52-week highs (breakouts) or lows (reversals)
 
-1️⃣1️⃣ **analyze_risk_metrics(symbol, start_date, end_date)**
+1️⃣9️⃣ **analyze_risk_metrics(symbol, start_date, end_date)**
    └─ Advanced risk analysis: max drawdown, Sharpe ratio, volatility trends
 
-1️⃣2️⃣ **find_momentum_stocks(min_return, min_consecutive_days, top_n)**
+2️⃣0️⃣ **find_momentum_stocks(min_return, min_consecutive_days, top_n)**
    └─ Find stocks with strong upward momentum (consecutive up days)
 
-1️⃣3️⃣ **detect_reversal_candidates(lookback_days, top_n)**
+2️⃣1️⃣ **detect_reversal_candidates(lookback_days, top_n)**
    └─ Find oversold stocks showing early reversal signals
 
-1️⃣4️⃣ **get_volume_price_divergence(min_divergence, top_n)**
+2️⃣2️⃣ **get_volume_price_divergence(min_divergence, top_n)**
    └─ Detect bearish/bullish divergence between price and volume
 
-1️⃣5️⃣ **get_newly_listed_symbols(months_back, top_n)**
+2️⃣3️⃣ **get_newly_listed_symbols(months_back, top_n)**
    └─ Find symbols that first appeared in dataset (newly listed stocks)
 
 **NEWS & SYNTHESIS**
 
-1️⃣6️⃣ **google_search(query)** [News Agent]
+2️⃣4️⃣ **google_search(query)** [News Agent]
    └─ Search financial news to correlate with price movements
+
+**AVAILABLE NSE INDICES:**
+📈 NIFTY50, NIFTY100, NIFTY200, NIFTY500, NIFTYNEXT50
+📊 NIFTYMIDCAP50, NIFTYMIDCAP100, NIFTYMIDCAP150
+📉 NIFTYSMALLCAP50, NIFTYSMALLCAP100, NIFTYSMALLCAP250
+🎯 NIFTYLARGEMIDCAP250, NIFTYMIDSMALLCAP400, NIFTYTOTALMARKET
+
+**SECTORAL INDICES:** 🆕
+🏦 Banking (NIFTYBANK), 💻 IT (NIFTYIT), 🚗 Auto (NIFTYAUTO)
+💊 Pharma (NIFTYPHARMA), 🛒 FMCG (NIFTYFMCG), 🏭 Metals (NIFTYMETAL)
+⚡ Energy/Oil & Gas (NIFTYOILGAS), 🏥 Healthcare (NIFTYHEALTHCARE)
+📺 Media (NIFTYMEDIA), 🏘️ Realty (NIFTYREALTY)
+💰 Financial Services (NIFTYFINANCE), 🧪 Chemicals (NIFTYCHEMICALS)
+🏪 Consumer Durables (NIFTYCONSUMERDURABLES)
+
+**MARKET CAP CLASSIFICATION:** 🆕
+🏢 LARGE-CAP: Stocks in NIFTY50, NIFTYNEXT50 (blue chip)
+🏭 MID-CAP: Stocks in NIFTYMIDCAP indices (growth potential)
+🏪 SMALL-CAP: Stocks in NIFTYSMALLCAP indices (high growth/risk)
 
 **AVAILABLE SECTORS FOR FILTERING:**
 🏦 Banking, 💻 IT, 🚗 Auto, 💊 Pharma, 🛒 FMCG,

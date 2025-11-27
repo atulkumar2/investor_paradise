@@ -4,8 +4,7 @@ ignore = .venv,venv,data
 [MESSAGES CONTROL]
 # Disable indentation-related checks to avoid conflicts with formatter
 disable =
-	bad-indentation,
-	C0330
+	bad-indentation
 
 [FORMAT]
 max-line-length = 88
