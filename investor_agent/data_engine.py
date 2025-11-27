@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from investor_agent.logger import get_logger
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+logger = get_logger(__name__)
 
 class MetricsEngine:
     """
@@ -41,7 +45,8 @@ class MetricsEngine:
 
         # Volatility (std deviation of daily returns)
         daily_returns = df['CLOSE'].pct_change().dropna()
-        volatility = daily_returns.std() * 100.0 if len(daily_returns) > 0 else 0.0
+        volatility_raw = daily_returns.std() * 100.0 if len(daily_returns) > 0 else 0.0
+        volatility = 0.0 if pd.isna(volatility_raw) else volatility_raw
 
         # Volume metrics
         avg_volume = df['VOLUME'].mean()
@@ -60,7 +65,8 @@ class MetricsEngine:
         cumulative_returns = (1 + daily_returns).cumprod()
         running_max = cumulative_returns.expanding().max()
         drawdown = (cumulative_returns - running_max) / running_max
-        max_drawdown = drawdown.min() * 100.0 if len(drawdown) > 0 else 0.0
+        max_drawdown_raw = drawdown.min() * 100.0 if len(drawdown) > 0 else 0.0
+        max_drawdown = 0.0 if pd.isna(max_drawdown_raw) else max_drawdown_raw
 
         # Moving averages (if enough data)
         sma_20 = df['CLOSE'].tail(20).mean() if len(df) >= 20 else last_price
@@ -106,7 +112,7 @@ class MetricsEngine:
         else:
             momentum = 0.0
 
-        return {
+        result = {
             # Basic metrics
             "return_pct": round(period_return, 2),
             "volatility": round(volatility, 2),
@@ -133,6 +139,13 @@ class MetricsEngine:
             "momentum_pct": round(momentum, 2)
         }
 
+        # Sanitize NaN values - replace with 0.0 for JSON compatibility
+        for key, value in result.items():
+            if isinstance(value, float) and pd.isna(value):
+                result[key] = 0.0
+
+        return result
+
 class NSEDataStore:
     """
     Manages NSE stock data loading and querying.
@@ -157,10 +170,12 @@ class NSEDataStore:
 
         # Check if parquet cache exists and is fresh
         if self._should_use_cache():
-            print("📦 Loading from parquet cache...")
+            logger.info("📦 Loading from parquet cache...")
             self._combined_cache = pd.read_parquet(self.cache_file)
             self._update_metadata()
-            print(f"✅ Loaded {len(self._combined_cache):,} rows from cache")
+            logger.info(
+                "✅ Loaded %s rows from cache", f"{len(self._combined_cache):,}"
+            )
             return self._combined_cache
 
         # Cache miss or stale - load from CSVs
@@ -168,7 +183,7 @@ class NSEDataStore:
         data_path = self.root / "NSE_RawData"
         files = list(data_path.rglob("*.csv"))
 
-        print(f"📂 Loading {len(files)} NSE data files from CSV...")
+        logger.info("📂 Loading %d NSE data files from CSV...", len(files))
 
         for file_path in files:
             try:
@@ -184,7 +199,7 @@ class NSEDataStore:
                     frames.append(normalized)
 
             except Exception as e:
-                print(f"⚠️  Skipping {file_path.name}: {e}")
+                logger.warning("⚠️  Skipping %s: %s", file_path.name, e)
                 continue
 
         if frames:
@@ -219,9 +234,9 @@ class NSEDataStore:
             # Update metadata
             self._update_metadata()
 
-            print(f"✅ Loaded {len(self._combined_cache):,} rows")
-            print(f"   Date range: {self.min_date} to {self.max_date}")
-            print(f"   Unique symbols: {self.total_symbols:,}")
+            logger.info("✅ Loaded %s rows", f"{len(self._combined_cache):,}")
+            logger.info("   Date range: %s to %s", self.min_date, self.max_date)
+            logger.info("   Unique symbols: %s", f"{self.total_symbols:,}")
 
             # Save to parquet cache for next time
             self._save_cache()
@@ -230,7 +245,7 @@ class NSEDataStore:
                 columns=["SYMBOL", "SERIES", "DATE", "OPEN", "HIGH", "LOW",
                         "CLOSE", "VOLUME", "DELIV_PER"]
             )
-            print("⚠️  No data loaded!")
+            logger.warning("⚠️  No data loaded!")
 
         return self._combined_cache
 
@@ -366,7 +381,7 @@ class NSEDataStore:
         # Check if any CSV is newer than cache
         for csv_file in data_path.rglob("*.csv"):
             if os.path.getmtime(csv_file) > cache_mtime:
-                print(f"⚠️  Cache stale: {csv_file.name} is newer")
+                logger.info("⚠️  Cache stale: %s is newer", csv_file.name)
                 return False
 
         return True
@@ -381,9 +396,9 @@ class NSEDataStore:
 
         try:
             self._combined_cache.to_parquet(self.cache_file, index=False)
-            print(f"💾 Saved cache to {self.cache_file}")
+            logger.info("💾 Saved cache to %s", self.cache_file)
         except Exception as e:
-            print(f"⚠️  Failed to save cache: {e}")
+            logger.error("⚠️  Failed to save cache: %s", e)
 
     def _update_metadata(self) -> None:
         """Update min_date, max_date, total_symbols from cached DataFrame."""

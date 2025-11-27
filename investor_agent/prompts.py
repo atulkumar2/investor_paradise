@@ -272,6 +272,8 @@ Route stock queries to analysis, handle everything else directly.
 # ==============================================================================
 
 def get_market_agent_prompt(data_context_str: str) -> str:
+    """Generate the Market Data Agent prompt with dynamic data context."""
+
     prompt_template = """
 ### 🎯 ROLE & IDENTITY
 You are the **Senior Quantitative Analyst** for 'Investor Paradise'.

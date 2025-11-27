@@ -137,21 +137,21 @@ def semantic_search(
     # Perform semantic search
     aggregate_results = []
     for col in _state.collections:  # type: ignore[attr-defined]
-        results = col.query(query_embeddings=[qe_list], n_results=n_results)
-        if not results or not results.get("documents"):
+        col_results = col.query(query_embeddings=[qe_list], n_results=n_results)
+        if not col_results or not col_results.get("documents"):
             continue
-        documents = results["documents"][0]  # type: ignore[index]
-        metadatas = results["metadatas"][0]  # type: ignore[index]
-        scores_or_distances = results.get("distances", 
-                  results.get("scores", [[]]))[0]  # type: ignore[index]
+        documents = col_results["documents"][0]  # type: ignore[index]
+        metadatas = col_results["metadatas"][0]  # type: ignore[index]
+        scores_or_distances = col_results.get("distances",
+                  col_results.get("scores", [[]]))[0]  # type: ignore[index]
         for doc, meta, score in zip(
             documents,
             metadatas,
             scores_or_distances,
         ):
-            if "scores" in results:
+            if "scores" in col_results:
                 similarity = score
-            elif "distances" in results:
+            elif "distances" in col_results:
                 similarity = 1 - score
             else:
                 similarity = None
