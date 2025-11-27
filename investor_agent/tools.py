@@ -1,5 +1,6 @@
 """ Investor Agent - Tools for Stock Market Analysis """
 
+
 from datetime import date, datetime, timedelta
 
 import pandas as pd
@@ -345,16 +346,28 @@ def get_sector_top_performers(
         else:
             return {"tool": "get_sector_top_performers", "error": "No data available"}
 
-    # Analyze each stock in the sector
+    # Vectorized bulk filtering - filter by symbols AND date range in one go
+    df = NSESTORE.df
+    mask = (
+        (df["SYMBOL"].isin(sector_stocks))
+        & (df["DATE"] >= pd.Timestamp(s_date))
+        & (df["DATE"] <= pd.Timestamp(e_date))
+    )
+    filtered = df[mask].copy()
 
+    if filtered.empty:
+        return {
+            "tool": "get_sector_top_performers",
+            "error": f"No data found for {sector} stocks in period"
+        }
+
+    # Bulk calculate stats for all stocks using groupby (vectorized)
     results = []
-    for symbol in sector_stocks:
-        stock_df = NSESTORE.get_stock_data(symbol, s_date, e_date)
-        if not stock_df.empty:
-            stats = MetricsEngine.calculate_period_stats(stock_df)
-            if stats:
-                stats['symbol'] = symbol
-                results.append(stats)
+    for symbol, group in filtered.groupby("SYMBOL"):
+        stats = MetricsEngine.calculate_period_stats(group)
+        if stats:
+            stats['symbol'] = symbol
+            results.append(stats)
 
     if not results:
         return {
@@ -451,7 +464,7 @@ def get_market_cap_performers(
             "performers": []
         }
 
-    _ = NSESTORE.df
+    df = NSESTORE.df
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
 
@@ -464,15 +477,28 @@ def get_market_cap_performers(
         else:
             return {"tool": "get_market_cap_performers", "error": "No data available"}
 
-    # Analyze each stock
+    # Vectorized bulk filtering - filter by symbols AND date range in one go
+    mask = (
+        (df["SYMBOL"].isin(cap_stocks))
+        & (df["DATE"] >= pd.Timestamp(s_date))
+        & (df["DATE"] <= pd.Timestamp(e_date))
+    )
+    filtered = df[mask].copy()
+
+    if filtered.empty:
+        return {
+            "tool": "get_market_cap_performers",
+            "error": f"No data found for {market_cap} cap stocks in period",
+            "performers": []
+        }
+
+    # Bulk calculate stats for all stocks using groupby (vectorized)
     results = []
-    for symbol in cap_stocks:
-        stock_df = NSESTORE.get_stock_data(symbol, s_date, e_date)
-        if not stock_df.empty:
-            stats = MetricsEngine.calculate_period_stats(stock_df)
-            if stats:
-                stats['symbol'] = symbol
-                results.append(stats)
+    for symbol, group in filtered.groupby("SYMBOL"):
+        stats = MetricsEngine.calculate_period_stats(group)
+        if stats:
+            stats['symbol'] = symbol
+            results.append(stats)
 
     if not results:
         return {
@@ -580,15 +606,30 @@ def get_index_top_performers(
     # Parse dates
     s_date, e_date, dates_defaulted = _get_date_range(start_date, end_date)
 
-    # Analyze each stock in the index
+    # Vectorized bulk filtering - filter by symbols AND date range in one go
+    df = NSESTORE.df
+    mask = (
+        (df["SYMBOL"].isin(index_stocks))
+        & (df["DATE"] >= pd.Timestamp(s_date))
+        & (df["DATE"] <= pd.Timestamp(e_date))
+    )
+    filtered = df[mask].copy()
+
+    if filtered.empty:
+        return {
+            "error": f"No data available for {index_name} constituents",
+            "index": index_name,
+            "period": {"start": str(s_date), "end": str(e_date)},
+            "performers": []
+        }
+
+    # Bulk calculate stats for all stocks using groupby (vectorized)
     results = []
-    for symbol in index_stocks:
-        stock_data = NSESTORE.get_stock_data(symbol, s_date, e_date)
-        if not stock_data.empty:
-            stats = MetricsEngine.calculate_period_stats(stock_data)
-            if stats:
-                stats['symbol'] = symbol
-                results.append(stats)
+    for symbol, group in filtered.groupby("SYMBOL"):
+        stats = MetricsEngine.calculate_period_stats(group)
+        if stats:
+            stats['symbol'] = symbol
+            results.append(stats)
 
     if not results:
         return {

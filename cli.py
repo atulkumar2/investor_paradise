@@ -61,7 +61,8 @@ def cleanup_old_sessions(db_path: str, days: int = 7):
 
         if deleted_count > 0:
             print(f"🗑️  Cleaned up {deleted_count} session(s) older than {days} days")
-            logger.info("Cleaned up %d session(s) older than %d days", deleted_count, days)
+            logger.info("Cleaned up %d session(s) older than %d days",
+                        deleted_count, days)
     except Exception as e:
         print(f"⚠️  Session cleanup warning: {e}")
         logger.warning("Session cleanup warning: %s", e)

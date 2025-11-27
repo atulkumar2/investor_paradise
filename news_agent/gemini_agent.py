@@ -121,12 +121,12 @@ def setup_agent(
     if hasattr(run, "app_name"):
         run.app_name = "agents"
         logger.debug("Runner app_name set to '%s'", run.app_name)
-    sess_service = InMemorySessionService()
+    session_service = InMemorySessionService()
     if hasattr(run, 'session_service'):
-        run.session_service = sess_service
+        run.session_service = session_service
     model_name = agent.name
     logger.info("Agent initialized and ready.")
-    return agent, run, sess_service, model_name
+    return agent, run, session_service, model_name
 
 
 async def create_or_get_session(
@@ -282,7 +282,7 @@ async def main(argv: list[str] | None = None):
         dirs = args.persist_dirs
     else:
         dirs = [args.persist_dir]
-    agent, run, sess_service, model_name = setup_agent(persist_dirs=dirs)
+    agent, run, session_service, model_name = setup_agent(persist_dirs=dirs)
     logger.info(
         "Ask questions about the PDF documents. Type 'exit' or 'quit' to quit."
     )
@@ -290,7 +290,7 @@ async def main(argv: list[str] | None = None):
     # Create or get session once at the start to ensure it exists
     try:
         session = await create_or_get_session(
-            run, sess_service, agent, SESSION_NAME
+            run, session_service, agent, SESSION_NAME
         )
         if session is None:
             raise RuntimeError("Failed to create or retrieve session")

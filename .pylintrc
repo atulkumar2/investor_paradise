@@ -1,5 +1,5 @@
 [MASTER]
-ignore = .venv,venv,data
+ignore = .venv,venv,data,ipynb_examples,__pycache__
 
 [MESSAGES CONTROL]
 # Disable indentation-related checks to avoid conflicts with formatter

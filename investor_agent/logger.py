@@ -68,7 +68,7 @@ def get_logger(name: str):
     if not has_stream:
         # Wrap stdout buffer with TextIOWrapper tht encodes to utf-8 and replaces errors
         try:
-            utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, 
+            utf8_stdout = io.TextIOWrapper(sys.stdout.buffer,
                           encoding="utf-8", errors="replace", line_buffering=True)
             sh = logging.StreamHandler(stream=utf8_stdout)
         except Exception:
