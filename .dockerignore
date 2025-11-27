@@ -10,6 +10,12 @@ ENV/
 env/
 investor_research/
 
+# Large data folders (exclude from build)
+vector-data/
+news_agent/
+news_ingestion/
+nse_data_download/
+
 # IDEs
 .vscode/
 .idea/
@@ -34,8 +40,15 @@ docs/
 *.md
 !README.md
 
-# Data (keep source data, exclude generated)
-data/*.parquet
+# Data (exclude large datasets, keep only cache, indices, and NSE_RawData)
+data/news_et_toi/
+data/NSE_indices/
+data/NSE_holidays/
+data/ipynb_examples/
+data/*.docx
+*.parquet
+*.feather
+*.csv.gz
 *.db
 *.sqlite
 

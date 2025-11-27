@@ -28,13 +28,17 @@ Access at: **<http://localhost:8000>**
 1. Click **Code** → **Codespaces** → **Create codespace on release**
 2. Wait for environment to load (~2 min)
 3. Add your API key:
+
    ```bash
    export GOOGLE_API_KEY="your-key-here"
    ```
+
 4. Run:
+
    ```bash
    uv run adk web . --port=8000 --host=0.0.0.0
    ```
+
 5. Click the forwarded port URL when prompted
 
 ### Option 3: Local Python Setup
@@ -73,19 +77,19 @@ export GOOGLE_API_KEY="your-api-key-here"
 
 ### 3. Run ADK Web UI
 
-**Option A: Serve all agents in the project**
+#### Option A: Serve all agents in the project
 
 ```bash
 uv run adk web . --port=8000 --host=0.0.0.0
 ```
 
-**Option B: Serve only the investor_agent**
+#### Option B: Serve only the investor_agent
 
 ```bash
 uv run adk web investor_agent --port=8000 --host=0.0.0.0
 ```
 
-**Option C: CLI (minimal demo)**
+#### Option C: CLI (minimal demo)
 
 ```bash
 uv run python cli.py
@@ -100,6 +104,8 @@ uv run python cli.py
   - Session history
   - Agent execution traces
 
+---
+
 ## Setting API Key in ADK Web UI
 
 If you didn't set the API key via `.env`, you can configure it in the web interface:
@@ -110,6 +116,8 @@ If you didn't set the API key via `.env`, you can configure it in the web interf
 4. Click **Save**
 
 The agent will now use your key for all Gemini model calls.
+
+---
 
 ## Docker Deployment (Portable)
 
@@ -129,6 +137,8 @@ docker run --rm \
 ```
 
 Access at: <http://localhost:8000>
+
+---
 
 ## Cloud Deployment Options
 

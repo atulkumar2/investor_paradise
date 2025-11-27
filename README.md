@@ -29,6 +29,7 @@ See full [deployment guide](DEPLOYMENT.md) for local Python setup and other opti
 ## 📚 Table of Contents
 
 - [🚀 Investor Paradise: AI-Powered Stock Analysis Agent](#-investor-paradise-ai-powered-stock-analysis-agent)
+  - [🎯 For Kaggle Evaluators](#-for-kaggle-evaluators)
   - [📚 Table of Contents](#-table-of-contents)
   - [What is This?](#what-is-this)
   - [Why Use This?](#why-use-this)
@@ -292,7 +293,7 @@ python download_nse_data.py
 ⏭️ Skipped (already exist): 12
 ❌ Failed: 3
 
-````
+````text
 
 
 **Customize date range** (edit `download_nse_data.py`):
@@ -464,7 +465,7 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 
 ## Project Structure
 
-```
+```text
 investor_paradise/
 ├── investor_agent/           # Main agent package
 │   ├── agent.py             # Entry point (exports root_agent)
@@ -525,7 +526,7 @@ You will be prompted to enter queries, and the tool will return the most relevan
 
 #### Example Query
 
-```
+```text
 Enter your search query (or type 'exit' to quit): RBI rate hike
 INFO:semantic_search:Found 3 results:
 INFO:semantic_search:Result 1 (similarity: 0.82)
@@ -619,7 +620,7 @@ logger.info("Custom log message")
 logger.error("Error occurred", exc_info=True)  # Includes stack trace
 ```
 
-#### View logs
+### View logs
 
 ```bash
 # Follow logs in real-time
@@ -667,7 +668,7 @@ python conversations/view_conversations.py --file conversations/conversation_his
 
 **Example output:**
 
-```
+```json
 📊 Conversation History Summary
 Session ID                                    Queries    Responses    Errors
 cli_session_20251127_143022                  5          5            0
