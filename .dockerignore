@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+investor_research/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+investor_agent_logger.log
+
+# Tests
+test_*.py
+.pytest_cache/
+.ruff_cache/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Data (keep source data, exclude generated)
+data/*.parquet
+*.db
+*.sqlite
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GitHub
+.github/
+
+# Misc
+Screenshot*.png
+*.png

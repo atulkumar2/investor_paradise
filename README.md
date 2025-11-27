@@ -5,6 +5,24 @@
 [![Google ADK](https://img.shields.io/badge/Google-ADK-4285F4?logo=google&logoColor=white)](https://github.com/google/adk)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Gemini 2.5](https://img.shields.io/badge/Gemini-2.5-orange)](https://ai.google.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
+
+## 🎯 For Kaggle Evaluators
+
+**Try it in 2 minutes without installing Python:**
+
+```bash
+# Using Docker (fastest)
+docker run --rm -e GOOGLE_API_KEY="your-key" -p 8000:8000 ghcr.io/atulkumar2/investor_paradise:latest
+```
+
+Or use **[GitHub Codespaces](https://github.com/codespaces/new?hide_repo_select=true&ref=release&repo=atulkumar2/investor_paradise)** (click to launch in browser)
+
+**Need an API key?** Get a free Gemini API key: <https://aistudio.google.com/apikey>
+
+See full [deployment guide](DEPLOYMENT.md) for local Python setup and other options.
 
 ---
 
@@ -46,9 +64,9 @@
     - [Model Selection](#model-selection)
     - [Cache Management](#cache-management)
   - [Logging](#logging)
-      - [View logs](#view-logs)
-      - [View Conversation History](#view-conversation-history)
-      - [Export ADK Web Sessions](#export-adk-web-sessions)
+    - [View logs](#view-logs)
+    - [View Conversation History](#view-conversation-history)
+    - [Export ADK Web Sessions](#export-adk-web-sessions)
   - [Linting \& Formatting](#linting--formatting)
   - [Dependencies](#dependencies)
   - [Contributing](#contributing)

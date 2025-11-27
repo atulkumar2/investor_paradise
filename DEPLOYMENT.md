@@ -1,13 +1,48 @@
-# Deployment Guide for Evaluators
+# 🚀 Deployment Guide for Evaluators
 
-This guide provides quick steps to run and demo the Investor Paradise agent.
+This guide helps you quickly run and evaluate the Investor Paradise agent.
 
-## Prerequisites
+---
+
+## ⚡ Quick Start (Choose One)
+
+### Option 1: Docker (Recommended - Zero Python Setup)
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/atulkumar2/investor_paradise.git
+cd investor_paradise
+
+# 2. Run with Docker (replace with your API key)
+docker build -t investor-paradise .
+docker run --rm \
+  -e GOOGLE_API_KEY="your-gemini-api-key" \
+  -p 8000:8000 \
+  investor-paradise
+```
+
+Access at: **<http://localhost:8000>**
+
+### Option 2: GitHub Codespaces (Browser-Based)
+
+1. Click **Code** → **Codespaces** → **Create codespace on release**
+2. Wait for environment to load (~2 min)
+3. Add your API key:
+   ```bash
+   export GOOGLE_API_KEY="your-key-here"
+   ```
+4. Run:
+   ```bash
+   uv run adk web . --port=8000 --host=0.0.0.0
+   ```
+5. Click the forwarded port URL when prompted
+
+### Option 3: Local Python Setup
+
+**Prerequisites:**
 
 - Python 3.11+
-- Google Gemini API key ([Get one free](https://aistudio.google.com/apikey))
-
-## Quick Start (Local)
+- Google Gemini API key ([Get free key](https://aistudio.google.com/apikey))
 
 ### 1. Set up environment
 
@@ -41,24 +76,24 @@ export GOOGLE_API_KEY="your-api-key-here"
 **Option A: Serve all agents in the project**
 
 ```bash
-adk web . --port=8000 --host=0.0.0.0
+uv run adk web . --port=8000 --host=0.0.0.0
 ```
 
 **Option B: Serve only the investor_agent**
 
 ```bash
-adk web investor_agent --port=8000 --host=0.0.0.0
+uv run adk web investor_agent --port=8000 --host=0.0.0.0
 ```
 
 **Option C: CLI (minimal demo)**
 
 ```bash
-python main.py
+uv run python cli.py
 ```
 
 ### 4. Access the UI
 
-- Open your browser to: http://localhost:8000
+- Open your browser to: <http://localhost:8000>
 - The web UI provides:
   - Interactive chat interface
   - API key configuration in Settings (if not using `.env`)
@@ -93,7 +128,7 @@ docker run --rm \
   investor-paradise
 ```
 
-Access at: http://localhost:8000
+Access at: <http://localhost:8000>
 
 ## Cloud Deployment Options
 
