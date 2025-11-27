@@ -1,12 +1,13 @@
 """ Investor Agent - ADK Web Backend Initialization """
 
+import atexit
 import os
 import warnings
 
 import httpx
 from dotenv import load_dotenv
-from google.adk.models.google_llm import Gemini
 
+# Note: We pass model names as strings; no direct Gemini construction needed here
 from investor_agent.data_engine import NSESTORE
 
 # CRITICAL: Import logger FIRST to configure root logging before any libraries
@@ -55,9 +56,10 @@ logger.info("📅 Date range: %s", NSESTORE.get_data_context())
 
 # --- 3. Initialize Model and Root Agent ---
 # Default: Use Flash-Lite for all agents (fast, cost-effective)
-lite_model = Gemini(model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY)
-flash_model = Gemini(model="gemini-2.5-flash", api_key=GOOGLE_API_KEY)
-pro_model = Gemini(model="gemini-2.5-pro", api_key=GOOGLE_API_KEY)
+# Pass model identifiers as strings; ADK reads API key from environment.
+LITE_MODEL = "gemini-2.5-flash-lite"
+FLASH_MODEL = "gemini-2.5-flash"
+PRO_MODEL = "gemini-2.5-pro"
 
 # Single root agent - full pipeline with Entry → Market → News → Merger
 # root_agent = create_pipeline(model)
@@ -65,12 +67,28 @@ pro_model = Gemini(model="gemini-2.5-pro", api_key=GOOGLE_API_KEY)
 # Example: Use Gemini Pro for computationally intensive agents
 # pro_model = Gemini(model="gemini-2.0-flash-001", api_key=API_KEY)
 root_agent = create_pipeline(
-    lite_model,                    # Flash-Lite for Entry/News (simple tasks)
-    market_model=flash_model,   # Flash for Market (8 tools, complex analysis)
-    merger_model=flash_model    # Pro for Merger (synthesis, report generation)
+    LITE_MODEL,                    # Flash-Lite for Entry/News (simple tasks)
+    market_model=FLASH_MODEL,   # Flash for Market (8 tools, complex analysis)
+    merger_model=FLASH_MODEL    # Pro for Merger (synthesis, report generation)
 )
 
+logger.info("=" * 80)
 logger.info("✅ Root agent initialized and ready for `adk web`.")
+logger.info("=" * 80)
+
+# Log when runner/server lifecycle events occur
+def on_shutdown():
+    """Log when ADK web server is shutting down."""
+    logger.info("=" * 80)
+    logger.info("🛑 ADK Web Server shutting down...")
+    logger.info("=" * 80)
+
+atexit.register(on_shutdown)
+
+# Log runner ready
+logger.info("=" * 80)
+logger.info("🚀 ADK Runner Ready - Waiting for queries...")
+logger.info("=" * 80)
 
 # --- 4. Export for ADK Web Server ---
 # The ADK web command expects a directory containing agent subdirectories.

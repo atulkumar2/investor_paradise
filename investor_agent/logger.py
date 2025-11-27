@@ -48,39 +48,44 @@ def get_logger(name: str):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
-    # Attach a file handler if logger has no handlers that write to our file.
+    # Unified formatter for both file and stream handlers.
+    fmt = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(name)s:%(lineno)s - %(message)s"
+    )
+
+    # Ensure consistent formatting and avoid duplicate propagation to root.
     has_file = any(
-        isinstance(h, logging.FileHandler) and getattr(
-          h, "baseFilename", None
-          ) and os.path.basename(h.baseFilename) == os.path.basename(_LOG_FILE)
+        isinstance(h, logging.FileHandler)
+        and getattr(h, "baseFilename", None)
+        and os.path.basename(h.baseFilename) == os.path.basename(_LOG_FILE)
         for h in logger.handlers
     )
     if not has_file:
         fh = logging.FileHandler(_LOG_FILE, encoding="utf-8")
         fh.setLevel(logging.DEBUG)
-        fmt = logging.Formatter(
-          "%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s")
         fh.setFormatter(fmt)
         logger.addHandler(fh)
 
     # Attach a stream handler that safely writes UTF-8 (replace not encodable chars).
     has_stream = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
     if not has_stream:
-        # Wrap stdout buffer with TextIOWrapper tht encodes to utf-8 and replaces errors
+        # Wrap stdout buffer with TextIOWrapper that encodes to utf-8 and replaces errors
         try:
-            utf8_stdout = io.TextIOWrapper(sys.stdout.buffer,
-                          encoding="utf-8", errors="replace", line_buffering=True)
+            utf8_stdout = io.TextIOWrapper(
+                sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+            )
             sh = logging.StreamHandler(stream=utf8_stdout)
-        except Exception:
+        except (AttributeError, LookupError, ValueError, OSError):
             # Fallback to default StreamHandler if wrapping fails.
             sh = logging.StreamHandler()
+        # Configure stream handler consistently
         sh.setLevel(logging.INFO)
-        sh.setFormatter(logging.Formatter(
-          "%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s"))
-        # Keep a reference so the wrapper isn't garbage-collected.
-        if hasattr(sh, "stream"):
-            sh._utf8_stream = getattr(sh, "stream")
+        sh.setFormatter(fmt)
+        # StreamHandler holds the stream; no extra reference needed.
         logger.addHandler(sh)
+
+    # Prevent logs from this logger being written again by the root handlers.
+    logger.propagate = False
 
     return logger
 

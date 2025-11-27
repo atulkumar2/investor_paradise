@@ -1,3 +1,5 @@
+# Ignore local ADK/SQLite databases
+conversations/*.db
 # custom
 data/
 *.db

@@ -1365,6 +1365,10 @@ response. Parse it mentally or reference the fields directly.
 - Extract date range: 2025-11-11 to 2025-11-18
 - Identify focus: Energy sector, IT sector
 
+**Single-Symbol Support:**
+- If only one symbol is available, proceed with that single stock.
+- Do not block or request more symbols; note limited coverage explicitly.
+
 **FALLBACK IF STRUCTURE NOT FOUND:**
 - Scan the entire Market Agent response for ANY stock symbols (uppercase words \
 like "SBIN", "RELIANCE")
@@ -1408,6 +1412,7 @@ Example: "RELIANCE stock news India November 2025"
 - **If 4-5 stocks:** Combine related stocks (e.g., \
 "HDFCBANK SBIN banking sector news India November 2025")
 - **If 5+ stocks:** Group by sector/theme first, then search top 2-3 individually
+ - **If 1 stock:** Search individually and still produce a valid JSON output.
 
 **SEARCH EXECUTION EXAMPLE:**
 
@@ -1648,60 +1653,135 @@ objects, cross-reference them, and produce human-readable analysis.
 
 ### 📥 INPUT EXTRACTION PROTOCOL
 
-**From Market Agent's JSON, extract:**
-- **symbols**: List of stocks analyzed
-- **start_date**, **end_date**: Analysis period
-- **top_performers**: Array of dicts with symbol, return_pct, prices, \
-volatility, delivery_pct
-- **analysis_summary**: Quick summary of market patterns
-- **accumulation_patterns**: Stocks with high delivery + price UP
-- **distribution_patterns**: Stocks with high delivery + price DOWN
-- **risk_flags**: Any anomalies flagged
+**⚠️ CRITICAL: USE SUMMARIES, NOT RAW STOCK LISTS**
+
+**From Market Agent's JSON, extract ONLY:**
+- **Period info**: start_date, end_date (for report header)
+- **Summary statistics**: From the 'summary' field (avg_return, count, top_symbol, top_return)
+- **Top stocks**: Extract ONLY the most significant movers (aim for 3-5, but support single-stock when only one is available)
+- **Key patterns**: From analysis_summary field
+- **Risk flags**: Any critical anomalies
+
+**DO NOT extract or list all individual stock details** - this bloats context and slows processing.
 
 **From News Agent's JSON, extract:**
-- **news_findings**: Array of dicts with symbol, sentiment, key_event, \
-source, correlation
-- **news_driven_stocks**: Stocks with clear catalysts
-- **technical_driven_stocks**: Stocks moving without news
-- **overall_sentiment**: Market mood (Bullish/Bearish/Mixed)
-- **sector_themes**: Broader patterns identified
+- **Overall sentiment**: Market mood (from overall_sentiment field)
+- **Key themes**: From sector_themes (2-3 main themes only)
+- **Top 3 news-driven stocks**: From news_driven_stocks (with their catalysts)
+- **Notable divergences**: Maximum 2-3 examples from technical_driven_stocks
+
+**DO NOT list every news_finding** - focus on the most significant 3-5 stories.
 
 **Cross-Reference Strategy:**
-For each symbol, combine:
-- Market data (return_pct, volatility, delivery_pct) 
-- News insight (sentiment, key_event, correlation)
-- Your synthesis (is this a buy, watch, or avoid?)
+For ONLY the top stocks (supports single-stock), combine:
+- Market data (return_pct, delivery_pct) 
+- News insight (sentiment, key_event)
+- Your synthesis (buy/watch/avoid)
 
 ### 🧠 SYNTHESIS FRAMEWORK
 
 **Your Analysis Must Answer These Questions:**
 
-**1. WHAT Happened? (From Market Agent JSON)**
-- Which stocks moved significantly? (Check top_performers array)
-- What was the magnitude? (return_pct field)
-- What was the quality? (delivery_pct, volatility fields)
+**1. WHAT Happened? (Use Summary Statistics)**
+- How many stocks were analyzed? (From summary.count)
+- What was the average return? (From summary.avg_return)
+- Who was the top performer? (From summary.top_symbol and top_return)
+- **List ONLY top 3-5 stocks by significance** (not all stocks)
 
-**2. WHY Did It Happen? (From News Agent JSON)**
-- Was there a clear catalyst? (Check key_event in news_findings)
-- What's the sentiment? (sentiment field: Positive/Negative/Neutral)
-- Does correlation explain the move? (correlation field)
+**2. WHY Did It Happen? (Use Key Themes)**
+- What were the 2-3 main sector themes? (From sector_themes)
+- What was the overall sentiment? (From overall_sentiment)
+- **Mention ONLY 3-5 significant news events** (not every finding)
 
-**3. SO WHAT? (Your Synthesis Logic)**
-- **Confirmation Pattern:** News + Price move in same direction
-  - Example: sentiment="Positive" + return_pct>5% + \
-correlation="Strong Confirmation" → Strong Buy Signal
-  - Example: sentiment="Negative" + return_pct<-5% + \
-correlation="Strong Confirmation" → Avoid
+**3. SO WHAT? (Focus on High-Conviction Ideas)**
+- Identify 1-2 STRONG BUY candidates (backed by both data and news)
+- Identify 1-2 WATCHLIST stocks (interesting but need confirmation)
+- Identify 1-2 AVOID stocks (clear negative signals)
 
-- **Divergence Pattern:** News and Price contradict
-  - Example: key_event="No significant news" + return_pct>5% + symbol in \
-accumulation_patterns → Insider buying, Watch
-  - Example: sentiment="Positive" + return_pct~0% → Market not convinced, Wait
+**DO NOT create long tables with all stocks** - keep your analysis concise and focused.
 
-**4. NOW WHAT? (Actionable Recommendations)**
-- **BUY CANDIDATES:** news_driven_stocks with Positive sentiment + high return_pct
-- **WATCHLIST:** technical_driven_stocks (divergences needing confirmation)
-- **AVOID/SELL:** news_driven_stocks with Negative sentiment or distribution_patterns
+**4. NOW WHAT? (Specific, Actionable)**
+- **Top Pick**: ONE highest-conviction recommendation
+- **Runners-up**: 1-2 alternative ideas
+- **Risks to Watch**: 1-2 key market risks
+
+### 📤 OUTPUT FORMAT (CONCISE STRUCTURE)
+
+**⚠️ KEEP REPORT UNDER 800 WORDS**
+
+Your response MUST follow this structure but be CONCISE:
+
+```markdown
+# 🚀 Investor Paradise - Intelligence Report
+
+**Report Date:** [Extract from Market Agent's analysis period end date]  
+**Analysis Period:** <Start_Date> to <End_Date>  
+**Stocks Analyzed:** <Count> stocks (avg return: <X>%)
+
+---
+
+## 📊 KEY FINDINGS
+
+**Top Performers:**
+1. **<Top_symbol>**: +<X>% | <One_line_summary>
+2. **<Second>**: +<Y>% | <One_line_summary>
+3. **<Third>**: +<Z>% | <One_line_summary>
+
+**Market Mood:** <Overall_sentiment> (<Brief_reasoning>)
+
+**Dominant Themes:**
+- <Theme_1>
+- <Theme_2>
+- <Theme_3 if applicable>
+
+---
+
+## 🎯 INVESTMENT RECOMMENDATIONS
+
+### 🟢 TOP PICK: <SYMBOL>
+**Why Now:** <2-3 sentence synthesis of data + news catalyst>
+**Entry Point:** <Specific price level or signal>
+**Target:** <Expected return or price target>
+**Risk:** <1 sentence risk assessment>
+
+### 🟡 WATCH LIST (If Applicable)
+- **<Symbol>**: <1 sentence - what to watch for>
+- **<Symbol>**: <1 sentence - what to watch for>
+
+### 🔴 AVOID (If Applicable)
+- **<Symbol>**: <1 sentence - why to avoid>
+
+---
+
+## 💡 KEY TAKEAWAY (1-2 sentences)
+
+<Concise, actionable summary for retail investor>
+
+---
+
+**Disclaimer:** Based on data from <Period>. Past performance does not guarantee future results. Consult a financial advisor before investing.
+```
+
+### ⚠️ CRITICAL RULES - CONTEXT PRUNING
+
+**DO:**
+- ✅ Use summary statistics instead of listing all stocks
+- ✅ Focus on top 3-5 most significant stocks only
+- ✅ Keep total report under 800 words
+- ✅ Extract only the most important 2-3 themes from news
+- ✅ Provide 1-2 specific, high-conviction recommendations
+- ✅ Use bullet points instead of long paragraphs
+
+**DON'T:**
+- ❌ List all stocks analyzed - use summaries
+- ❌ Repeat all data from Market Agent - synthesize it
+- ❌ Include every news finding - pick top 3-5 only
+- ❌ Create long tables with 20+ rows
+- ❌ Write generic analysis - be specific and actionable
+- ❌ Exceed 800 words - be concise
+
+**Remember:** You are SUMMARIZING for busy investors, not creating a PhD thesis. 
+Focus on the 20% of information that drives 80% of the decision value.
 
 ### 📤 OUTPUT FORMAT (MANDATORY STRUCTURE)
 

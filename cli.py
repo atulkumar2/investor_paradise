@@ -9,11 +9,11 @@ from datetime import datetime, timedelta
 
 import httpx
 from dotenv import load_dotenv
-from google.adk.models.google_llm import Gemini
 from google.adk.runners import Runner
-from google.adk.sessions import DatabaseSessionService
+from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types
 
+from conversations.conversation_logger import conversation_logger
 from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
 from investor_agent.sub_agents import create_pipeline
@@ -24,9 +24,9 @@ logger = get_logger(__name__)
 original_init = httpx.AsyncClient.__init__
 def patched_init(self, *args, **kwargs):
     """ Patch httpx AsyncClient to disable SSL verification. """
-    kwargs['verify'] = False
-    original_init(self, *args, **kwargs)
-httpx.AsyncClient._init_ = patched_init
+    kwargs.setdefault('verify', False)
+    return original_init(self, *args, **kwargs)
+httpx.AsyncClient.__init__ = patched_init
 # -------------------------------------------------
 
 load_dotenv()
@@ -82,52 +82,53 @@ async def main():
 
     # 2. Initialize Model & Root Agent (single pipeline)
     # Default: Use Flash-Lite for all agents (fast, cost-effective)
-    model = Gemini(model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY)
+    model = "gemini-2.5-flash-lite"
     root_agent = create_pipeline(model)  # SequentialAgent: Entry→Market→News→Merger
 
-    # Example: Use Gemini Pro for computationally intensive agents
-    # pro_model = Gemini(model="gemini-2.0-flash-001", api_key=API_KEY)
-    # root_agent = create_pipeline(
-    #     model,                    # Flash-Lite for Entry/News (simple tasks)
-    #     market_model=pro_model,   # Pro for Market (8 tools, complex analysis)
-    #     merger_model=pro_model    # Pro for Merger (synthesis, report generation)
-    # )
-
-    # 3. Setup Session Service & Runner
-    db_path = "my_agent_data.db"
-    db_url = "sqlite+aiosqlite:///my_agent_data.db"
-
-    # Cleanup old sessions before starting
+    # 3. Setup Runner with in-memory session service
+    db_path = "conversations/my_agent_data.db"
+    # Cleanup old sessions file if present (best-effort)
     cleanup_old_sessions(db_path, days=7)
 
-    session_service = DatabaseSessionService(db_url=db_url)
+    session_service = InMemorySessionService()
 
     runner = Runner(
         agent=root_agent,
         app_name="investor_paradise",
-        session_service=session_service
+        session_service=session_service,
     )
 
     # 4. Create Session
     user_id = str(uuid.uuid4())
+    session_id = f"cli_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # No explicit session creation when not using a session service
+
+    # Ensure session exists in session_service before running
     await session_service.create_session(
         app_name="investor_paradise",
         user_id=user_id,
-        session_id="session_1"
+        session_id=session_id,
     )
 
     print("\n💬 Ready! Ask me about NSE stocks or just say hi! (Type 'exit' to quit)\n")
-    logger.info("CLI ready for user input")
+    logger.info("CLI ready for user input (session_id: %s)", session_id)
 
     while True:
         try:
             user_input = input("You: ")
             if user_input.lower() in ["exit", "quit", "bye"]:
                 print("👋 Goodbye! Happy investing!")
-                logger.info("User exited CLI")
+                logger.info("[Session: %s] User exited CLI", session_id)
                 break
 
-            logger.info("User query: %s", user_input)
+            # Log query with session ID
+            query_id = conversation_logger.log_query(
+                session_id=session_id,
+                user_id=user_id,
+                query=user_input
+            )
+            logger.info("[Session: %s] User query: %s", session_id, user_input)
             print("🔍 Processing...\n")
 
             user_message = types.Content(
@@ -135,11 +136,12 @@ async def main():
             )
 
             final_response = ""
+            tools_used = []
 
             # Run the full pipeline (Entry agent will route internally)
             async for event in runner.run_async(
-                user_id="user_1",
-                session_id="session_1",
+                user_id=user_id,
+                session_id=session_id,
                 new_message=user_message
             ):
                 if event.is_final_response() and event.content and event.content.parts:
@@ -148,14 +150,28 @@ async def main():
             if final_response:
                 print(f"Assistant:\n{final_response}\n")
 
+                # Log response with session ID
+                conversation_logger.log_response(
+                    query_id=query_id,
+                    session_id=session_id,
+                    response=final_response,
+                    tools_used=tools_used
+                )
+
         except KeyboardInterrupt:
             print("\n👋 Goodbye! Happy investing!")
-            logger.info("User terminated session via KeyboardInterrupt")
+            logger.info(
+              "[Session: %s] User terminated session via KeyboardInterrupt", session_id)
             break
         except Exception as e:
             error_msg = f"Error during agent execution: {e}"
             print(f"❌ Error: {e}")
-            logger.error(error_msg, exc_info=True)
+            logger.error("[Session: %s] %s", session_id, error_msg, exc_info=True)
+            conversation_logger.log_error(
+                session_id=session_id,
+                query_id=locals().get('query_id'),
+                error=str(e)
+            )
             traceback.print_exc()
 
 if __name__ == "__main__":

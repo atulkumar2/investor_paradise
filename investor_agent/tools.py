@@ -130,7 +130,8 @@ For 'latest week', use the 7 days ending on {NSESTORE.max_date}."""
 def get_top_gainers(
     start_date: str | None = None,
     end_date: str | None = None,
-    top_n: int = 10
+    top_n: int = 10,
+    detail_level: str = "compact"
 ) -> dict:
     """
     Get top performing stocks by percentage return over a period.
@@ -139,6 +140,9 @@ def get_top_gainers(
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of top stocks to return (default 10)
+        detail_level: Response verbosity - "compact" (symbol+return only),
+                     "standard" (+ prices), "full" (all metrics)
+                     Default: "compact" for faster LLM processing
 
     Returns:
         Dictionary with period info, top gainers list, and summary statistics
@@ -177,16 +181,31 @@ def get_top_gainers(
     logger.info("✅ Found %d top gainers for period %s to %s (avg return: %.2f%%)",
                len(ranked), s_date, e_date, ranked['return_pct'].mean())
 
-    # Build structured output
-    return {
-        "tool": "get_top_gainers",
-        "period": {
-            "start": str(s_date),
-            "end": str(e_date),
-            "days": int(ranked.iloc[0]['days_count']),
-            "dates_defaulted": dates_defaulted
-        },
-        "gainers": [
+    # Build stock list based on detail level
+    if detail_level == "compact":
+        # Minimal format: only symbol and return (50% fewer tokens)
+        gainers_list = [
+            {
+                "symbol": row['symbol'],
+                "return_pct": round(float(row['return_pct']), 2)
+            }
+            for idx, row in ranked.iterrows()
+        ]
+    elif detail_level == "standard":
+        # Include prices but skip volatility/delivery
+        gainers_list = [
+            {
+                "rank": idx + 1,
+                "symbol": row['symbol'],
+                "return_pct": round(float(row['return_pct']), 2),
+                "price_start": round(float(row['start_price']), 2),
+                "price_end": round(float(row['end_price']), 2)
+            }
+            for idx, row in ranked.iterrows()
+        ]
+    else:  # "full"
+        # Complete details (original format)
+        gainers_list = [
             {
                 "rank": idx + 1,
                 "symbol": row['symbol'],
@@ -200,7 +219,17 @@ def get_top_gainers(
                 )
             }
             for idx, row in ranked.iterrows()
-        ],
+        ]
+
+    return {
+        "tool": "get_top_gainers",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(ranked.iloc[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "gainers": gainers_list,
         "summary": {
             "avg_return": round(float(ranked['return_pct'].mean()), 2),
             "top_symbol": ranked.iloc[0]['symbol'],
@@ -213,7 +242,8 @@ def get_top_gainers(
 def get_top_losers(
     start_date: str | None = None,
     end_date: str | None = None,
-    top_n: int = 10
+    top_n: int = 10,
+    detail_level: str = "compact"
 ) -> dict:
     """
     Get worst performing stocks by percentage return over a period.
@@ -222,6 +252,9 @@ def get_top_losers(
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of bottom stocks to return (default 10)
+        detail_level: Response verbosity - "compact" (symbol+return only),
+                     "standard" (+ prices), "full" (all metrics)
+                     Default: "compact" for faster LLM processing
 
     Returns:
         Dictionary with period info, top losers list, and summary statistics
@@ -263,15 +296,31 @@ def get_top_losers(
     logger.info("✅ Found %d top losers for period %s to %s (avg return: %.2f%%)",
                len(losers), s_date, e_date, losers['return_pct'].mean())
 
-    return {
-        "tool": "get_top_losers",
-        "period": {
-            "start": str(s_date),
-            "end": str(e_date),
-            "days": int(losers.iloc[0]['days_count']),
-            "dates_defaulted": dates_defaulted
-        },
-        "losers": [
+    # Build stock list based on detail level
+    if detail_level == "compact":
+        # Minimal format: only symbol and return (50% fewer tokens)
+        losers_list = [
+            {
+                "symbol": row['symbol'],
+                "return_pct": round(float(row['return_pct']), 2)
+            }
+            for idx, row in losers.iterrows()
+        ]
+    elif detail_level == "standard":
+        # Include prices but skip volatility/delivery
+        losers_list = [
+            {
+                "rank": idx + 1,
+                "symbol": row['symbol'],
+                "return_pct": round(float(row['return_pct']), 2),
+                "price_start": round(float(row['start_price']), 2),
+                "price_end": round(float(row['end_price']), 2)
+            }
+            for idx, row in losers.iterrows()
+        ]
+    else:  # "full"
+        # Complete details (original format)
+        losers_list = [
             {
                 "rank": idx + 1,
                 "symbol": row['symbol'],
@@ -285,7 +334,17 @@ def get_top_losers(
                 )
             }
             for idx, row in losers.iterrows()
-        ],
+        ]
+
+    return {
+        "tool": "get_top_losers",
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(losers.iloc[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "losers": losers_list,
         "summary": {
             "avg_return": round(float(losers['return_pct'].mean()), 2),
             "worst_symbol": losers.iloc[0]['symbol'],
@@ -299,7 +358,8 @@ def get_sector_top_performers(
     sector: str,
     start_date: str | None = None,
     end_date: str | None = None,
-    top_n: int = 5
+    top_n: int = 5,
+    detail_level: str = "compact"
 ) -> dict:
     """
     Get top performing stocks from a specific sector.
@@ -310,6 +370,9 @@ def get_sector_top_performers(
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of top stocks to return (default 5)
+        detail_level: Response verbosity - "compact" (symbol+return only),
+                     "standard" (+ prices), "full" (all metrics)
+                     Default: "compact" for faster LLM processing
 
     Returns:
         Dictionary with sector performers, period info, and summary statistics
@@ -383,16 +446,28 @@ def get_sector_top_performers(
                len(results), sector,
                sum(r['return_pct'] for r in results) / len(results))
 
-    return {
-        "tool": "get_sector_top_performers",
-        "sector": sector,
-        "period": {
-            "start": str(s_date),
-            "end": str(e_date),
-            "days": int(results[0]['days_count']),
-            "dates_defaulted": dates_defaulted
-        },
-        "performers": [
+    # Build performers list based on detail level
+    if detail_level == "compact":
+        performers_list = [
+            {
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2)
+            }
+            for idx, stats in enumerate(results)
+        ]
+    elif detail_level == "standard":
+        performers_list = [
+            {
+                "rank": idx + 1,
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2),
+                "price_start": round(float(stats['start_price']), 2),
+                "price_end": round(float(stats['end_price']), 2)
+            }
+            for idx, stats in enumerate(results)
+        ]
+    else:  # "full"
+        performers_list = [
             {
                 "rank": idx + 1,
                 "symbol": stats['symbol'],
@@ -406,7 +481,18 @@ def get_sector_top_performers(
                 )
             }
             for idx, stats in enumerate(results)
-        ],
+        ]
+
+    return {
+        "tool": "get_sector_top_performers",
+        "sector": sector,
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "performers": performers_list,
         "summary": {
             "sector_avg_return": round(
                 sum(s['return_pct'] for s in results) / len(results), 2
@@ -424,7 +510,8 @@ def get_market_cap_performers(
     start_date: str | None = None,
     end_date: str | None = None,
     top_n: int = 10,
-    sort_by: str = "return_pct"
+    sort_by: str = "return_pct",
+    detail_level: str = "compact"
 ) -> dict:
     """
     Get top or worst performing stocks by market cap category.
@@ -435,6 +522,9 @@ def get_market_cap_performers(
         end_date: End date (YYYY-MM-DD). Defaults to latest
         top_n: Number of stocks to return (default 10)
         sort_by: Metric to sort by - "return_pct" (default) or "volatility"
+        detail_level: Response verbosity - "compact" (symbol+return only),
+                     "standard" (+ prices), "full" (all metrics)
+                     Default: "compact" for faster LLM processing
 
     Returns:
         Dictionary with performers, period info, and summary
@@ -527,16 +617,28 @@ def get_market_cap_performers(
                len(results), market_cap.upper(),
                sum(r['return_pct'] for r in results) / len(results))
 
-    return {
-        "tool": "get_market_cap_performers",
-        "market_cap": market_cap.upper(),
-        "period": {
-            "start": str(s_date),
-            "end": str(e_date),
-            "days": int(results[0]['days_count']),
-            "dates_defaulted": dates_defaulted
-        },
-        "performers": [
+    # Build performers list based on detail level
+    if detail_level == "compact":
+        performers_list = [
+            {
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2)
+            }
+            for idx, stats in enumerate(results)
+        ]
+    elif detail_level == "standard":
+        performers_list = [
+            {
+                "rank": idx + 1,
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2),
+                "price_start": round(float(stats['start_price']), 2),
+                "price_end": round(float(stats['end_price']), 2)
+            }
+            for idx, stats in enumerate(results)
+        ]
+    else:  # "full"
+        performers_list = [
             {
                 "rank": idx + 1,
                 "symbol": stats['symbol'],
@@ -550,7 +652,18 @@ def get_market_cap_performers(
                 )
             }
             for idx, stats in enumerate(results)
-        ],
+        ]
+
+    return {
+        "tool": "get_market_cap_performers",
+        "market_cap": market_cap.upper(),
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "performers": performers_list,
         "summary": {
             "avg_return": round(
                 sum(s['return_pct'] for s in results) / len(results), 2
@@ -567,7 +680,8 @@ def get_index_top_performers(
     index_name: str,
     start_date: str | None = None,
     end_date: str | None = None,
-    top_n: int = 10
+    top_n: int = 10,
+    detail_level: str = "compact"
 ) -> dict:
     """
     Get top performing stocks from a specific NSE index.
@@ -577,6 +691,9 @@ def get_index_top_performers(
         start_date: Start date (YYYY-MM-DD). Defaults to 7 days ago
         end_date: End date (YYYY-MM-DD). Defaults to latest available
         top_n: Number of top performers to return (default 10)
+        detail_level: Response verbosity - "compact" (symbol+return only),
+                     "standard" (+ prices), "full" (all metrics)
+                     Default: "compact" for faster LLM processing
 
     Returns:
         Dictionary with index_name, period info, and top performers list
@@ -643,17 +760,28 @@ def get_index_top_performers(
     results.sort(key=lambda x: x['return_pct'], reverse=True)
     results = results[:top_n]
 
-    return {
-        "tool": "get_index_top_performers",
-        "index": index_name,
-        "index_size": len(index_stocks),
-        "period": {
-            "start": str(s_date),
-            "end": str(e_date),
-            "days": int(results[0]['days_count']),
-            "dates_defaulted": dates_defaulted
-        },
-        "performers": [
+    # Build performers list based on detail level
+    if detail_level == "compact":
+        performers_list = [
+            {
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2)
+            }
+            for idx, stats in enumerate(results)
+        ]
+    elif detail_level == "standard":
+        performers_list = [
+            {
+                "rank": idx + 1,
+                "symbol": stats['symbol'],
+                "return_pct": round(float(stats['return_pct']), 2),
+                "price_start": round(float(stats['start_price']), 2),
+                "price_end": round(float(stats['end_price']), 2)
+            }
+            for idx, stats in enumerate(results)
+        ]
+    else:  # "full"
+        performers_list = [
             {
                 "rank": idx + 1,
                 "symbol": stats['symbol'],
@@ -667,7 +795,19 @@ def get_index_top_performers(
                 )
             }
             for idx, stats in enumerate(results)
-        ],
+        ]
+
+    return {
+        "tool": "get_index_top_performers",
+        "index": index_name,
+        "index_size": len(index_stocks),
+        "period": {
+            "start": str(s_date),
+            "end": str(e_date),
+            "days": int(results[0]['days_count']),
+            "dates_defaulted": dates_defaulted
+        },
+        "performers": performers_list,
         "summary": {
             "index_avg_return": round(
                 sum(s['return_pct'] for s in results) / len(results), 2

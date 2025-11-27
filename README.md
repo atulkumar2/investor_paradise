@@ -20,6 +20,7 @@
     - [📰 3. News Analyst (Qualitative Context)](#-3-news-analyst-qualitative-context)
     - [🎯 4. CIO Synthesizer (Investment Strategist)](#-4-cio-synthesizer-investment-strategist)
   - [Two Ways to Use](#two-ways-to-use)
+  - [🎬 Quick Demo for Evaluators](#-quick-demo-for-evaluators)
   - [Prerequisites](#prerequisites)
   - [Setup Instructions](#setup-instructions)
     - [1. Clone the Repository](#1-clone-the-repository)
@@ -34,8 +35,6 @@
     - [📈 Discovery \& Screening](#-discovery--screening)
     - [🔍 Deep Analysis](#-deep-analysis)
     - [🎯 Pattern Detection](#-pattern-detection)
-    - [🛡️ Security Testing](#️-security-testing)
-    - [📊 Time-Based Analysis](#-time-based-analysis)
   - [Project Structure](#project-structure)
   - [News Ingestion \& Semantic Search](#news-ingestion--semantic-search)
     - [PDF Ingestion](#pdf-ingestion)
@@ -46,8 +45,10 @@
     - [Custom Data Path](#custom-data-path)
     - [Model Selection](#model-selection)
     - [Cache Management](#cache-management)
-    - [Logging](#logging)
+  - [Logging](#logging)
       - [View logs](#view-logs)
+      - [View Conversation History](#view-conversation-history)
+      - [Export ADK Web Sessions](#export-adk-web-sessions)
   - [Linting \& Formatting](#linting--formatting)
   - [Dependencies](#dependencies)
   - [Contributing](#contributing)
@@ -622,6 +623,65 @@ grep "MarketAnalyst\|NewsAnalyst" investor_agent_logger.log
 - Sensitive data (API keys) are NOT logged
 - Stack traces appear only for ERROR-level logs (not INFO)
 - Root logger configured to capture all Python logs (including libraries)
+
+#### View Conversation History
+
+Track user queries and agent responses with session IDs:
+
+```bash
+# View all sessions summary
+python conversations/view_conversations.py
+
+# View details for a specific session
+python conversations/view_conversations.py --session cli_session_20251127_143022
+
+# Use custom log file location
+python conversations/view_conversations.py --file conversations/conversation_history.jsonl
+```
+
+**Conversation log format (JSONL):**
+
+- Each line is a JSON object (query, response, or error)
+- Includes `session_id` for grouping related interactions
+- Timestamps in ISO format for precise tracking
+- Query/response pairs linked by `query_id`
+- Stored in `conversation_history.jsonl`
+
+**Example output:**
+
+```
+📊 Conversation History Summary
+Session ID                                    Queries    Responses    Errors
+cli_session_20251127_143022                  5          5            0
+Total sessions: 1
+```
+
+#### Export ADK Web Sessions
+
+ADK web stores conversations in its own database. Export them to `conversation_history.jsonl`:
+
+```bash
+# Export all ADK web sessions
+python conversations/export_adk_sessions.py
+
+# Export specific session
+python conversations/export_adk_sessions.py --session-id abc123def456
+
+# Export sessions since a date
+python conversations/export_adk_sessions.py --since 2024-01-01
+
+# Specify custom database location
+python conversations/export_adk_sessions.py --db ~/.google_adk/sessions/sessions.db
+```
+
+**How it works:**
+
+1. CLI (`python cli.py`) logs conversations in real-time to `conversation_history.jsonl`
+2. ADK web (`adk web`) stores conversations in `~/.google_adk/sessions/*.db`
+3. Run `export_adk_sessions.py` periodically to sync ADK web sessions to JSONL
+4. View all conversations (CLI + ADK web) with `python view_conversations.py`
+
+📖 **See [conversations/CONVERSATION_LOGGING_QUICKSTART.md](./conversations/CONVERSATION_LOGGING_QUICKSTART.md) for complete guide on CLI vs ADK web logging.**
 
 ---
 
