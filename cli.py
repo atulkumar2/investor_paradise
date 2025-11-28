@@ -14,7 +14,7 @@ httpx.AsyncClient.__init__ = patched_init
 # -------------------------------------------------
 
 load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 from google.adk.models.google_llm import Gemini
 from google.adk.runners import Runner
@@ -53,9 +53,9 @@ async def main():
     )
 
     # 3. Initialize Models with Retry Config
-    model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY, retry_options=retry_config)
-    flash_model = Gemini(model="gemini-2.5-flash", api_key=API_KEY, retry_options=retry_config)
-    pro_model = Gemini(model="gemini-2.5-pro", api_key=API_KEY, retry_options=retry_config)
+    model = Gemini(model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY, retry_options=retry_config)
+    flash_model = Gemini(model="gemini-2.5-flash", api_key=GOOGLE_API_KEY, retry_options=retry_config)
+    pro_model = Gemini(model="gemini-2.5-pro", api_key=GOOGLE_API_KEY, retry_options=retry_config)
 
     # Create pipeline with multiple models for different agents
     root_agent = create_pipeline(
