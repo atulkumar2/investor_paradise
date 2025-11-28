@@ -19,6 +19,7 @@ API_KEY = os.getenv("GOOGLE_API_KEY")
 from google.adk.models.google_llm import Gemini
 from google.adk.runners import Runner
 from google.adk.apps.app import App, EventsCompactionConfig
+from google.adk.sessions import DatabaseSessionService
 from google.genai import types
 
 from investor_agent.sub_agents import create_pipeline
@@ -30,7 +31,6 @@ from cli_helpers import (
     console,
     select_or_create_session,
 )
-from custom_session_service import FixedDatabaseSessionService
 from spinner import process_query_with_spinner
 
 
@@ -44,17 +44,25 @@ async def main():
     console.print(f"[green]✅ Data loaded: {len(NSESTORE.df):,} rows[/green]")
     console.print(f"[cyan]📅 Database Context: {NSESTORE.get_data_context()}[/cyan]")
 
-    # 2. Initialize Models
-    model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY)
-    flash_model = Gemini(model="gemini-2.5-flash", api_key=API_KEY)
-    pro_model = Gemini(model="gemini-2.5-pro", api_key=API_KEY)
+    # 2. Configure Retry Options
+    retry_config = types.HttpRetryOptions(
+        attempts=5,
+        exp_base=7,
+        initial_delay=1,
+        http_status_codes=[429, 500, 503, 504],
+    )
+
+    # 3. Initialize Models with Retry Config
+    model = Gemini(model="gemini-2.5-flash-lite", api_key=API_KEY, retry_options=retry_config)
+    flash_model = Gemini(model="gemini-2.5-flash", api_key=API_KEY, retry_options=retry_config)
+    pro_model = Gemini(model="gemini-2.5-pro", api_key=API_KEY, retry_options=retry_config)
 
     # Create pipeline with multiple models for different agents
     root_agent = create_pipeline(
         entry_model=model,        # Flash-Lite for Entry (simple classification)
         market_model=flash_model, # Flash for Market (complex analysis with tools)
         news_model=model,         # Flash-Lite for News (simple google search)
-        merger_model=flash_model # Flash for Merger (report synthesis)
+        merger_model=flash_model  # Flash for Merger (report synthesis)
     )
     
     # Override root_agent's module to fix session resume issues
@@ -71,11 +79,8 @@ async def main():
     )
 
     # 4. Setup Session Service & Runner
-    db_path = "investor_agent/data/sessions.db"
-    
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    # Use custom session service that fixes EventCompaction deserialization
-    session_service = FixedDatabaseSessionService(db_url=db_url)
+    db_url = "sqlite+aiosqlite:///investor_agent/data/sessions.db"
+    session_service = DatabaseSessionService(db_url=db_url)
     
     runner = Runner(
         app=app,  # Use App instead of agent directly
@@ -222,8 +227,8 @@ async def main():
                 
                 if token_summary:
                     console.print(f"[dim]{token_summary}[/dim]")
-                console.print(f"[dim]{elapsed_time}[/dim]")
-                # console.print(f"[dim]💡 Queries this session: {query_count}[/dim]")
+                console.print(f"[dim]⏱️  Processed in {elapsed_time}[/dim]")
+                console.print(f"[dim]💡 Queries this session: {query_count}[/dim]")
                 console.print(f"[dim]To stop, type 'exit', 'quit', or 'bye'.  \nTo switch sessions, type 'switch'.  \nTo clear history, type 'clear'.[/dim]")
             
         except KeyboardInterrupt:

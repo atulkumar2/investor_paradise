@@ -22,7 +22,9 @@ console = Console()
 AGENT_STATUS = {
     "EntryRouter": ("🧭 Understanding your request", "cyan"),
     "MarketAnalyst": ("📊 Analyzing stock market data", "blue"),
-    "NewsAnalyst": ("📰 Searching financial news", "yellow"),
+    "NewsIntelligence": ("📰 Gathering news intelligence", "yellow"),
+    "PDFNewsScout": ("📄 Searching in-house PDF database", "magenta"),
+    "WebNewsResearcher": ("🌐 Searching real-time web news", "yellow"),
     "CIO_Synthesizer": ("📝 Preparing investment report", "green"),
 }
 
@@ -46,8 +48,11 @@ TOOL_STATUS = {
     "detect_reversal_candidates": ("🔄 Detecting reversal patterns", "yellow"),
     "get_volume_price_divergence": ("📊 Analyzing volume divergence", "blue"),
     "list_available_tools": ("🛠️ Listing available tools", "cyan"),
-    "google_search": ("🔍 Searching news and catalysts", "yellow"),
+    "google_search": ("🔍 Searching web for news & catalysts", "yellow"),
     "check_data_availability": ("📅 Checking data availability", "cyan"),
+    "get_company_name": ("🏢 Looking up company name", "cyan"),
+    "load_collections_for_date_range": ("📚 Loading news collections for date range", "magenta"),
+    "semantic_search": ("🔎 Searching PDF news database", "magenta"),
 }
 
 
@@ -109,7 +114,9 @@ class TokenTracker:
     AGENT_MODEL_MAP = {
         "EntryRouter": "gemini-2.5-flash-lite",
         "MarketAnalyst": "gemini-2.5-flash",
-        "NewsAnalyst": "gemini-2.5-flash-lite",
+        "NewsIntelligence": "gemini-2.5-flash-lite",  # Parent parallel agent (doesn't use model directly)
+        "PDFNewsScout": "gemini-2.5-flash-lite",
+        "WebNewsResearcher": "gemini-2.5-flash-lite",
         "CIO_Synthesizer": "gemini-2.5-pro"
     }
     
@@ -124,6 +131,10 @@ class TokenTracker:
                 'response': 0,
                 'total': 0
             }
+        
+        # Handle None values (can happen with certain event types)
+        prompt_tokens = prompt_tokens or 0
+        response_tokens = response_tokens or 0
         
         self.model_usage[model_name]['prompt'] += prompt_tokens
         self.model_usage[model_name]['response'] += response_tokens

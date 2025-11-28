@@ -56,7 +56,8 @@ class MarketAnalysisOutput(BaseModel):
     
     # Performance data
     top_performers: List[StockPerformance] = Field(
-        description="List of top performing stocks with metrics"
+        default=[],
+        description="List of top performing stocks with metrics (empty when skipping analysis)"
     )
     
     # Analysis insights
