@@ -22,15 +22,15 @@ COPY .env.example ./.env.example
 # Install dependencies
 RUN uv sync --frozen
 
-# Download NSE data from GitHub Release
+# Download NSE data from GitHub Release (separate data repo)
 RUN mkdir -p ./data && \
     echo "📦 Downloading NSE data from GitHub Release..." && \
-    curl -L https://github.com/atulkumar2/investor_paradise/releases/download/v1.0-data/nse-data.tar.gz \
+    curl -L https://github.com/atulkumar2/nse_data_download/releases/download/latest/nse-data.tar.gz \
     -o nse-data.tar.gz && \
-    echo "📂 Extracting data..." && \
-    tar -xzf nse-data.tar.gz && \
+    echo "📂 Extracting data into ./data..." && \
+    tar -xzf nse-data.tar.gz -C ./data && \
     rm nse-data.tar.gz && \
-    echo "✅ Data downloaded and extracted"
+    echo "✅ Data downloaded and extracted into ./data"
 
 # Preload NSE data to parquet cache (speeds up first query)
 RUN uv run python -c "from investor_agent.data_engine import NSESTORE; _ = NSESTORE.df; print('✅ Data preloaded to cache')"
@@ -39,8 +39,8 @@ RUN uv run python -c "from investor_agent.data_engine import NSESTORE; _ = NSEST
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+#     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run ADK web server
 CMD ["uv", "run", "adk", "web", ".", "--port=8000", "--host=0.0.0.0"]
