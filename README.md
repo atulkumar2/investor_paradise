@@ -66,8 +66,8 @@ See full [deployment guide](DEPLOYMENT.md) for local Python setup and other opti
     - [Cache Management](#cache-management)
   - [Logging](#logging)
     - [View logs](#view-logs)
-    - [View Conversation History](#view-conversation-history)
-    - [Export ADK Web Sessions](#export-adk-web-sessions)
+      - [View Conversation History](#view-conversation-history)
+      - [Export ADK Web Sessions](#export-adk-web-sessions)
   - [Linting \& Formatting](#linting--formatting)
   - [Dependencies](#dependencies)
   - [Contributing](#contributing)
@@ -209,7 +209,7 @@ python main.py
 ### 1. Clone the Repository
 
 ````bash
-git clone https://github.com/atulkumar2/investor_paradise.git
+git clone https://github.com/atulkumar2/investor_paradise.git --branch=release
 cd investor_paradise
 ```text
 
