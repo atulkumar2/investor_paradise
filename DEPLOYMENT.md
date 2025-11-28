@@ -15,7 +15,7 @@ This guide helps you quickly run and evaluate the Investor Paradise agent.
 
 **Linux/macOS:**
 
-git clone https://github.com/atulkumar2/investor_paradise.git
+git clone https://github.com/atulkumar2/investor_paradise.git --branch=release
 cd investor_paradise
 
 docker build -t investor-paradise .
@@ -31,7 +31,7 @@ docker run --rm \
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/atulkumar2/investor_paradise.git
+git clone https://github.com/atulkumar2/investor_paradise.git --branch=release
 cd investor_paradise
 
 # 2. Build and run with Docker
@@ -48,7 +48,7 @@ docker run --rm \
 
 **Windows (PowerShell):**
 
-git clone https://github.com/atulkumar2/investor_paradise.git
+git clone https://github.com/atulkumar2/investor_paradise.git --branch=release
 cd investor_paradise
 
 docker build -t investor-paradise .
@@ -61,7 +61,7 @@ investor-paradise
 
 ```powershell
 # 1. Clone the repo
-git clone https://github.com/atulkumar2/investor_paradise.git
+git clone https://github.com/atulkumar2/investor_paradise.git --branch=release
 cd investor_paradise
 
 # 2. Ensure Docker Desktop is running (check system tray)
