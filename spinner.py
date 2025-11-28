@@ -93,7 +93,7 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
                         console.print(f"\n[dim yellow]📦 Context compacted: {event.actions.compaction.start_timestamp:.2f} → {event.actions.compaction.end_timestamp:.2f}[/dim yellow]")
                 
                 # Detect function calls (tools) in event content
-                if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts'):
+                if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts') and event.content.parts:
                     for part in event.content.parts:
                         if hasattr(part, 'function_call') and part.function_call:
                             func_call = part.function_call
@@ -114,7 +114,7 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
                                 #     current_status[0] = f"🔧 Using {tool_name}"
                 
                 # Detect content and check for analysis type
-                if event.content and event.content.parts:
+                if event.content and hasattr(event.content, 'parts') and event.content.parts:
                     content = event.content.parts[0].text
                     if content and content.strip():
                         final_text = content

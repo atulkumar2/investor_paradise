@@ -218,3 +218,6 @@ __marimo__/
 
 # Logs
 *.log
+
+mac/
+archive/
