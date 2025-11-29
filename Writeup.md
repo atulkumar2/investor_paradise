@@ -1,5 +1,8 @@
 # 🌟 Investor Paradise – The Future of Smart Investing
 
+<img width="1408" height="736" alt="Gemini_Generated_Image_hkw7o3hkw7o3hkw7" src="https://github.com/user-attachments/assets/87756cfe-cb55-4cfc-ba99-d2e74c919b15" />
+
+
  *World’s first multi-agent AI system that fuses hard NSE market data with real-time news intelligence to deliver informed financial decisions.*
 
 ---
