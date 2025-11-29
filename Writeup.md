@@ -59,13 +59,12 @@ A **multi-agent architecture of intelligence** that combines:
   - 🔒 User isolation  
 - 👀 **Observability**: Full activity tracking for **debugging and audit**
 
+---
 
 # 🔍 Inside Investor Paradise – What Sets It Ahead??
 
 ## **Investor Paradise: The USP**
 Investor Paradise isn’t just another stock screener or chatbot. It’s a **research-grade AI system** designed for speed, depth, and accuracy.
-
----
 
 ### ✅ **Quantitative Analysis**
 - 24 specialized tools for:
