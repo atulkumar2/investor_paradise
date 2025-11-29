@@ -54,19 +54,8 @@ docs/
 !README.md
 
 # Project-specific data / large folders
-investor_research/
-vector-data/
-news_agent/
-news_ingestion/
-nse_data_download/
-data/news_et_toi/
 data/NSE_indices/
 data/NSE_holidays/
 data/ipynb_examples/
 data/*.docx
-*.parquet
 *.feather
-*.csv.gz
-
-# Large or local data directories (kept out of image)
-investor_agent/data/

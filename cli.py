@@ -4,6 +4,7 @@ This module wires together the data layer, Google ADK agents, and
 a rich-based terminal UI to provide an interactive investing assistant.
 """
 
+import sys
 import asyncio
 import os
 import traceback
@@ -28,34 +29,61 @@ from cli_helpers import (
 from investor_agent.data_engine import NSESTORE
 from investor_agent.sub_agents import create_pipeline
 from spinner import process_query_with_spinner
+from investor_agent.logger import get_logger
+from investor_agent.api_key_manager import (
+    get_or_prompt_api_key,
+    reset_api_key,
+    show_help,
+)
 
-# --- SSL Patch (Required for your environment) ---
-original_init = httpx.AsyncClient.__init__
-
-
-def patched_init(self, *args, **kwargs):
-    """Initialize an AsyncClient with SSL verification disabled.
-
-    This patch is required only for environments where certificate
-    verification fails (for example, some corporate networks). It
-    should not be used in production as it weakens TLS security.
-    """
-
-    kwargs["verify"] = False
-    original_init(self, *args, **kwargs)
-httpx.AsyncClient.__init__ = patched_init
-# -------------------------------------------------
 
 
 
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+from google.adk.models.google_llm import Gemini
+from google.adk.runners import Runner
+from google.adk.apps.app import App, EventsCompactionConfig
+from google.adk.sessions import DatabaseSessionService
+from google.genai import types
+
+from investor_agent.sub_agents import create_pipeline
+from investor_agent.data_engine import NSESTORE
+from cli_helpers import (
+    AgentProgressTracker,
+    TokenTracker,
+    get_or_create_user_id,
+    console,
+    select_or_create_session,
+)
+from spinner import process_query_with_spinner
+logger = get_logger(__name__)
 
 
-async def main() -> None:
-    """Run the interactive Investor Paradise CLI session loop."""
+async def main():
+    # Handle command-line arguments
+    if "--reset-api-key" in sys.argv:
+        reset_api_key()
+        return
+    
+    if "--help" in sys.argv or "-h" in sys.argv:
+        show_help()
+        return
+    
+    # Get API key (will prompt if not found)
+    GOOGLE_API_KEY = get_or_prompt_api_key()
+    # set GOOGLE_API_KEY as environment variable for downstream use
+    os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+    
+    # Validate API key was retrieved
+    if not GOOGLE_API_KEY:
+        console.print("[bold red]❌ Failed to retrieve API key[/bold red]")
+        console.print("[yellow]Please try again or set GOOGLE_API_KEY environment variable[/yellow]")
+        return
+    
     console.print("\n[bold cyan]🚀 Initializing Investor Paradise...[/bold cyan]")
-
+    logger.info("Initializing Investor Paradise CLI")
+    
     # 1. Pre-load Data with spinner
     with console.status(
         "[bold blue]📂 Loading NSE stock data...[/bold blue]", spinner="dots"
@@ -63,7 +91,9 @@ async def main() -> None:
         _ = NSESTORE.df
 
     console.print(f"[green]✅ Data loaded: {len(NSESTORE.df):,} rows[/green]")
+    logger.info(f"Data loaded: {len(NSESTORE.df):,} rows")
     console.print(f"[cyan]📅 Database Context: {NSESTORE.get_data_context()}[/cyan]")
+    logger.info(f"Database Context: {NSESTORE.get_data_context()}")
 
     # 2. Configure Retry Options
     retry_config = types.HttpRetryOptions(
@@ -74,6 +104,8 @@ async def main() -> None:
     )
 
     # 3. Initialize Models with Retry Config
+    logger.info("Initializing Gemini models with retry config")
+    logger.info(f"API key present: {bool(GOOGLE_API_KEY)}, length: {len(GOOGLE_API_KEY) if GOOGLE_API_KEY else 0}")
     lite_model = Gemini(
         model="gemini-2.5-flash-lite",
         api_key=GOOGLE_API_KEY,
@@ -89,8 +121,10 @@ async def main() -> None:
         api_key=GOOGLE_API_KEY,
         retry_options=retry_config,
     )
+    logger.info("Models initialized: flash-lite, flash, pro")
 
     # Create pipeline with multiple models for different agents
+    logger.info("Creating agent pipeline")
     root_agent = create_pipeline(
         entry_model=lite_model,        # Flash-Lite for Entry (simple classification)
         market_model=flash_model, # Flash for Market (complex analysis with tools)
@@ -102,6 +136,7 @@ async def main() -> None:
     root_agent.__module__ = "cli"
 
     # 3. Create App with EventsCompactionConfig
+    logger.info("Creating App with EventsCompactionConfig")
     app = App(
         name="investor_agent",  # Must match directory name
         root_agent=root_agent,
@@ -113,6 +148,7 @@ async def main() -> None:
 
     # 4. Setup Session Service & Runner
     db_url = "sqlite+aiosqlite:///investor_agent/data/sessions.db"
+    logger.info(f"Setting up session service with database: {db_url}")
     session_service = DatabaseSessionService(db_url=db_url)
 
     runner = Runner(
@@ -123,17 +159,20 @@ async def main() -> None:
     # 5. Get persistent user_id (not session_id)
     user_id = get_or_create_user_id()
     console.print(f"[cyan]👤 User ID: {user_id[:8]}...[/cyan]")
-
+    logger.info(f"User ID: {user_id}")
+    
     # 6. Interactive session selection (sessions stored in DatabaseSessionService)
     session_id = await select_or_create_session(
         session_service,
         "investor_agent",
         user_id,
     )
+    logger.info(f"Session selected: {session_id}")
 
     console.print(
         "\n[bold green]💬 Ready! Ask me about NSE stocks or just say hi![/bold green]"
     )
+    logger.info("CLI ready for user input")
     console.print(
         f"[dim]Session: {session_id[:8]}... | Commands: 'exit', "
         "'clear', 'switch'[/dim]\n"
@@ -147,6 +186,7 @@ async def main() -> None:
 
             if user_input.strip().lower() in ["exit", "quit", "bye"]:
                 console.print("[yellow]👋 Goodbye! Happy investing![/yellow]")
+                logger.info("User exited CLI")
                 break
 
             # Handle switch command - change to different session
@@ -162,6 +202,7 @@ async def main() -> None:
                 console.print(
                     f"[green]✅ Switched to session: {session_id[:8]}...[/green]"
                 )
+                logger.info(f"Switched to session: {session_id}")
                 console.print(
                     f"[dim]Session: {session_id[:8]}... | Commands: 'exit', "
                     "'clear', 'switch'[/dim]\n"
@@ -185,13 +226,16 @@ async def main() -> None:
                     console.print(
                         "[yellow]🗑️  Session history cleared! Starting fresh.[/yellow]"
                     )
+                    logger.info(f"Session history cleared: {session_id}")
                 except Exception as e:
                     console.print(f"[red]⚠️  Could not clear session: {e}[/red]")
+                    logger.error(f"Could not clear session: {e}")
                 continue
 
             console.print()  # Blank line for separation
 
             query_count += 1
+            logger.info(f"Processing query #{query_count}: {user_input[:50]}...")
 
             user_message = types.Content(
                 role="user",
@@ -225,6 +269,7 @@ async def main() -> None:
                     console.print(
                         "[yellow]⚠️ This session has incompatible data format.[/yellow]"
                     )
+                    logger.warning(f"Incompatible session format detected: {session_id}")
                     console.print("[yellow]Creating a new session...[/yellow]\n")
                     session_id = await select_or_create_session(
                         session_service,
@@ -235,6 +280,7 @@ async def main() -> None:
                     console.print(
                         f"[green]✅ New session created: {session_id[:8]}...[/green]\n"
                     )
+                    logger.info(f"New session created: {session_id}")
                     # Retry with new session
                     displayed_agents.clear()
                     displayed_tools.clear()
@@ -250,7 +296,8 @@ async def main() -> None:
             if final_text and isinstance(final_text, str) and final_text.strip():
                 # Check if this is a markdown report (stock analysis)
                 is_markdown_report = "# 🚀 Investor Paradise" in final_text
-
+                logger.debug(f"Response type: {'markdown_report' if is_markdown_report else 'simple_response'}")
+                
                 if is_markdown_report:
                     # Stock analysis report - render as markdown
                     console.print("\n")
@@ -314,9 +361,12 @@ async def main() -> None:
 
         except KeyboardInterrupt:
             console.print("\n\n[yellow]👋 Goodbye! Happy investing![/yellow]")
+            logger.info("User interrupted with Ctrl+C")
             break
         except Exception as e:
             console.print(f"\n[bold red]❌ Error: {e}[/bold red]")
+            logger.error(f"Error processing query: {e}", exc_info=True)
+            import traceback
             traceback.print_exc()
 
 if __name__ == "__main__":
