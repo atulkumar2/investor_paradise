@@ -5,6 +5,18 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "google-adk[web] @ git+https://github.com/google/adk-python/",
+    "google-genai",
+    "pandas",
+    "python-dotenv",
+    "fastparquet",
+    "certifi",
+    "sqlalchemy>=2.0.44",
+    "aiosqlite>=0.21.0",
+    "rich>=14.2.0",
+    "chromadb>=0.4.24",
+    "sentence-transformers>=2.6.1",
+    "PyPDF2>=3.0.1",
     "google-adk>=1.18.0",
     "google-generativeai>=0.8.5",
     "pandas>=2.3.3",
