@@ -9,7 +9,7 @@
 ## 🚀 The Pitch
 **World’s first multi-agent AI system** for Indian markets, fusing **hard NSE data with real-time news intelligence**.
 1. Solves the **fragmentation problem**—no more juggling charts, news, PDFs, and spreadsheets.
-2. Powered by **Four specialized AI agents**:
+2. Powered by **Specialized AI agents**:
    - 🧠 Quant Analyst
    - 🔍 News Intelligence Researcher
    - 👔 CIO Synthesizer
