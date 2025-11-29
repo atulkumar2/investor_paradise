@@ -169,10 +169,6 @@ Investor Paradise creates a virtual team of **Four specialized AI agents**, work
    *“Price dropped due to this event → Recommendation: Buy / Watch / Avoid.”*  
 
 
-<img width="600" height="900" alt="mermaid" src="https://github.com/user-attachments/assets/1f53e60e-0a00-40de-892b-e39d9c662969" />
-
----
-
 <img width="600" height="1200" alt="mermaid_v2" src="https://github.com/user-attachments/assets/4b8cd19f-0fd9-4637-8b4e-b1ddf3222833" />
 
 ---
