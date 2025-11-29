@@ -47,6 +47,19 @@ A **multi-agent architecture of intelligence** that combines:
 
 ---
 
+## 🔑 Key Concepts Demonstrated
+
+- 🤖 **Multi-agent**: Four specialized AI agents working in sequence to deliver research-grade analysis in seconds  
+- 📚 **RAG**: ChromaDB to store PDF chunks as grounded data , Semantic Smart search retrieval
+- 🛠️ **Context Engineering**: Structured JSON payloads are passed to the next agent in sequence  
+- 🧠 **Sessions & Memory**:  
+  - 🗂️ Intelligent Memory Management  
+  - 🕰️ Persistent conversation history  
+  - 🔄 Session switching  
+  - 🔒 User isolation  
+- 👀 **Observability**: Full activity tracking for **debugging and audit**
+
+
 # 🔍 Inside Investor Paradise – What Sets It Ahead??
 
 ## **Investor Paradise: The USP**
@@ -82,42 +95,59 @@ Unlike:
 
 ---
 
-## 🧭 Investor Agent Tools Reference
+## Key Features into Consideration while Designing Solution
 
-### 🔧 Core Utilities
-- 🧮 **`_parse_date`** — Safely parse `YYYY-MM-DD` strings into `date` objects, returning `None` if parsing fails.
-- 🗓️ **`_get_date_range`** — Validates and builds a start/end date pair, applying sensible defaults and indicating when defaults were used.
+### 🎨 Enhanced CLI Experience (Rich Library)
+Beautifully formatted terminal output with:
+- **Syntax highlighting** for code and data tables
+- **Progress spinners** with real-time agent activity tracking
+- **Styled panels** for investment reports with color-coded signals (🟢 Buy / 🟡 Watch / 🔴 Avoid)
+- **Responsive layouts** that adapt to terminal width
+- **Live updates** showing which tools are executing in real-time
 
-### 📅 Data Awareness
-- 🛰️ **`check_data_availability`** — Reveals the datastore’s current coverage window plus symbol/record counts so you know the valid query range.
+### 💾 Intelligent Memory Management (Event Compaction)
+- **Automatic context optimization** compresses conversation history to stay within token limits
+- **Smart summarization** preserves critical information while reducing context size by 60-80%
+- **Long conversations supported** without performance degradation
+- **Cost-efficient** by minimizing redundant token usage across multi-turn dialogs
 
-### 📈 Performance Screens
-- 🚀 **`get_top_gainers`** — Lists the best-performing stocks for a period with configurable detail (compact, standard, full).
-- 📉 **`get_top_losers`** — Mirrors the gainers screen but highlights worst performers over the same configurable period.
-- 🏭 **`get_sector_top_performers`** — Filters by sector (Banking, IT, Auto, etc.) and ranks constituents over the selected range.
-- 🧢 **`get_market_cap_performers`** — Ranks stocks inside a market-cap bucket (LARGE/MID/SMALL) by return or volatility.
-- 🧾 **`get_index_top_performers`** — Surfaces the leading stocks within any supported NSE index (NIFTY50, NIFTYBANK, ...).
+### 💰 Token Tracking & Cost Analysis
+Built-in usage monitoring for transparency:
+```
+📊 Token Usage by Model:
+  • gemini-2.5-flash-lite: 70,179 in + 385 out = 70,564 total ($0.0054)
+  • gemini-2.5-flash: 82,176 in + 2,019 out = 84,195 total ($0.0135)
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Combined: 154,759 tokens ($0.0189)
+⏱️  Processing time: 53.26s
+💡 Queries this session: 2
+```
+- **Per-model breakdown** shows cost attribution across agent pipeline
+- **Session totals** track cumulative usage
+- **Real-time updates** after each query
 
-### 🔍 Deep Dives & Comparisons
-- 🧠 **`analyze_stock`** — Full single-stock dossier covering price action, technicals, risk, momentum, and verdict.
-- ⚖️ **`compare_stocks`** — Side-by-side comparison of multiple tickers with return, volatility, delivery %, and qualitative verdicts.
+### 🗄️ Session Management (Database-Backed)
+Persistent conversation history with SQLite:
+- **Multi-session support**: Create unlimited named sessions
+- **Session switching**: Jump between conversations with `switch` command
+- **History persistence**: Resume analysis from days/weeks ago
+- **Auto-cleanup**: Configurable retention (default: 7 days)
+- **User isolation**: Each user ID gets separate session namespace
 
-### 🛰️ Pattern & Signal Detection
-- 📊 **`detect_volume_surge`** — Flags unusual recent volume relative to baseline averages for potential catalysts.
-- 📦 **`get_delivery_momentum`** — Finds symbols with elevated average delivery %, hinting at institutional accumulation.
-- ✨ **`detect_breakouts`** — Identifies breakout candidates combining strong returns with controlled volatility.
-- 🏃 **`find_momentum_stocks`** — Highlights names showing sustained upside (minimum return plus consecutive up days).
-- 🔄 **`detect_reversal_candidates`** — Spots oversold stocks displaying early reversal signals supported by volume.
-- 🔔 **`get_volume_price_divergence`** — Warns when price and volume trends diverge (bearish or bullish setups).
+```bash
+# CLI session commands
+switch  # Browse and switch between past sessions
+clear   # Clear current session history
+exit    # Save and exit (history preserved)
+```
 
-### 📚 Reference & Listings
-- 🗂️ **`list_available_tools`** — Human-readable catalog of every tool exposed in `tools.py`.
-- 🕛 **`get_52week_high_low`** — Lists stocks trading near their 52-week highs (breakouts) or lows (reversals).
-- 🛡️ **`analyze_risk_metrics`** — Advanced risk view including max drawdown, Sharpe-like ratios, downside vol, and trend context.
-- 🆕 **`get_newly_listed_symbols`** — Shows symbols first appearing in the dataset within a recent timeframe, with initial vs. current pricing.
+### ⚡ Performance Optimizations
+- **Parquet caching**: 13x faster data loading (5s → 0.4s for 1M+ rows)
+- **Lazy loading**: Models instantiated only when needed
+- **Parallel news agents**: PDF + web search run concurrently
+- **Streaming responses**: Progressive output display for better UX (CLI)
 
 ---
-
 
 ## **How AI Powers It All - Under the Hood**  
 Investor Paradise creates a virtual team of **Four specialized AI agents**, working 24/7 for you:  
@@ -267,75 +297,18 @@ Long conversations made the agents **forget earlier analysis** due to context li
 ### ⚡The complexity 
 We chose the **Google Agent Development Kit (ADK)** and **Gemini 2.5** because this level of complexity demands a specific stack:
 
----
-
 ### 🧠 **The Context Window**  
 Financial analysis is **data-heavy**.  
 We needed **Gemini's massive context window** to hold historical prices and news without suffering from *middle-loss*.
 
----
 
 ### ⚡ **Tooling Velocity**  
 ADK’s built-in **google_search tool** and **easy agent routing** saved us **days of boilerplate coding**.
 
----
 
 ### 🖥️ **Visual Debugging**  
 The **ADK Web UI** was our **X-Ray machine**.  
 Watching agents “think” in real-time allowed us to **debug logic flows instantly**.
-
----
-## Key Features
-
-### 🎨 Enhanced CLI Experience (Rich Library)
-Beautifully formatted terminal output with:
-- **Syntax highlighting** for code and data tables
-- **Progress spinners** with real-time agent activity tracking
-- **Styled panels** for investment reports with color-coded signals (🟢 Buy / 🟡 Watch / 🔴 Avoid)
-- **Responsive layouts** that adapt to terminal width
-- **Live updates** showing which tools are executing in real-time
-
-### 💾 Intelligent Memory Management (Event Compaction)
-- **Automatic context optimization** compresses conversation history to stay within token limits
-- **Smart summarization** preserves critical information while reducing context size by 60-80%
-- **Long conversations supported** without performance degradation
-- **Cost-efficient** by minimizing redundant token usage across multi-turn dialogs
-
-### 💰 Token Tracking & Cost Analysis
-Built-in usage monitoring for transparency:
-```
-📊 Token Usage by Model:
-  • gemini-2.5-flash-lite: 70,179 in + 385 out = 70,564 total ($0.0054)
-  • gemini-2.5-flash: 82,176 in + 2,019 out = 84,195 total ($0.0135)
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Combined: 154,759 tokens ($0.0189)
-⏱️  Processing time: 53.26s
-💡 Queries this session: 2
-```
-- **Per-model breakdown** shows cost attribution across agent pipeline
-- **Session totals** track cumulative usage
-- **Real-time updates** after each query
-
-### 🗄️ Session Management (Database-Backed)
-Persistent conversation history with SQLite:
-- **Multi-session support**: Create unlimited named sessions
-- **Session switching**: Jump between conversations with `switch` command
-- **History persistence**: Resume analysis from days/weeks ago
-- **Auto-cleanup**: Configurable retention (default: 7 days)
-- **User isolation**: Each user ID gets separate session namespace
-
-```bash
-# CLI session commands
-switch  # Browse and switch between past sessions
-clear   # Clear current session history
-exit    # Save and exit (history preserved)
-```
-
-### ⚡ Performance Optimizations
-- **Parquet caching**: 13x faster data loading (5s → 0.4s for 1M+ rows)
-- **Lazy loading**: Models instantiated only when needed
-- **Parallel news agents**: PDF + web search run concurrently
-- **Streaming responses**: Progressive output display for better UX (CLI)
 
 ---
 
@@ -370,6 +343,42 @@ Investor Paradise bridges the gap by:
 - ✅ **Security-first:** Dedicated agent filters prompt injection attacks
 - ✅ **Actionable output:** Clear 🟢 Buy / 🟡 Watch / 🔴 Avoid recommendations with reasoning
 - ✅ **Full observability:** All operations logged to `investor_agent_logger.log` for debugging and audit
+
+---
+
+## 🧭 Investor Agent Tools Reference
+
+### 🔧 Core Utilities
+- 🧮 **`_parse_date`** — Safely parse `YYYY-MM-DD` strings into `date` objects, returning `None` if parsing fails.
+- 🗓️ **`_get_date_range`** — Validates and builds a start/end date pair, applying sensible defaults and indicating when defaults were used.
+
+### 📅 Data Awareness
+- 🛰️ **`check_data_availability`** — Reveals the datastore’s current coverage window plus symbol/record counts so you know the valid query range.
+
+### 📈 Performance Screens
+- 🚀 **`get_top_gainers`** — Lists the best-performing stocks for a period with configurable detail (compact, standard, full).
+- 📉 **`get_top_losers`** — Mirrors the gainers screen but highlights worst performers over the same configurable period.
+- 🏭 **`get_sector_top_performers`** — Filters by sector (Banking, IT, Auto, etc.) and ranks constituents over the selected range.
+- 🧢 **`get_market_cap_performers`** — Ranks stocks inside a market-cap bucket (LARGE/MID/SMALL) by return or volatility.
+- 🧾 **`get_index_top_performers`** — Surfaces the leading stocks within any supported NSE index (NIFTY50, NIFTYBANK, ...).
+
+### 🔍 Deep Dives & Comparisons
+- 🧠 **`analyze_stock`** — Full single-stock dossier covering price action, technicals, risk, momentum, and verdict.
+- ⚖️ **`compare_stocks`** — Side-by-side comparison of multiple tickers with return, volatility, delivery %, and qualitative verdicts.
+
+### 🛰️ Pattern & Signal Detection
+- 📊 **`detect_volume_surge`** — Flags unusual recent volume relative to baseline averages for potential catalysts.
+- 📦 **`get_delivery_momentum`** — Finds symbols with elevated average delivery %, hinting at institutional accumulation.
+- ✨ **`detect_breakouts`** — Identifies breakout candidates combining strong returns with controlled volatility.
+- 🏃 **`find_momentum_stocks`** — Highlights names showing sustained upside (minimum return plus consecutive up days).
+- 🔄 **`detect_reversal_candidates`** — Spots oversold stocks displaying early reversal signals supported by volume.
+- 🔔 **`get_volume_price_divergence`** — Warns when price and volume trends diverge (bearish or bullish setups).
+
+### 📚 Reference & Listings
+- 🗂️ **`list_available_tools`** — Human-readable catalog of every tool exposed in `tools.py`.
+- 🕛 **`get_52week_high_low`** — Lists stocks trading near their 52-week highs (breakouts) or lows (reversals).
+- 🛡️ **`analyze_risk_metrics`** — Advanced risk view including max drawdown, Sharpe-like ratios, downside vol, and trend context.
+- 🆕 **`get_newly_listed_symbols`** — Shows symbols first appearing in the dataset within a recent timeframe, with initial vs. current pricing.
 
 ---
 
