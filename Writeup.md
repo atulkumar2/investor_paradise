@@ -9,7 +9,7 @@
 ## 🚀 The Pitch
 **World’s first multi-agent AI system** for Indian markets, fusing **hard NSE data with real-time news intelligence**.
 1. Solves the **fragmentation problem**—no more juggling charts, news, PDFs, and spreadsheets.
-2. Powered by **Specialized AI agents**:
+2. Powered by **5 Specialized AI agents**:
    - 🧠 Quant Analyst
    - 🔍 News Intelligence Researcher
    - 👔 CIO Synthesizer
@@ -49,7 +49,7 @@ A **multi-agent architecture of intelligence** that combines:
 
 ## 🔑 Key Concepts Demonstrated
 
-- 🤖 **Multi-agent**: Four specialized AI agents working in sequence to deliver research-grade analysis in seconds  
+- 🤖 **Multi-agent**: Five specialized AI agents working in sequence to deliver research-grade analysis in seconds  
 - 📚 **RAG**: ChromaDB to store PDF chunks as grounded data , Semantic Smart search retrieval
 - 🛠️ **Context Engineering**: Structured JSON payloads are passed to the next agent in sequence  
 - 🧠 **Sessions & Memory**:  
@@ -90,7 +90,7 @@ Unlike:
 - **Traditional stock screeners** → Static filters, no context
 - **Generic chatbots** → Hallucinated data, vague advice
   
-**Investor Paradise uses **four specialized AI agents** working in sequence to deliver **research-grade analysis in seconds**.**
+**Investor Paradise uses **five specialized AI agents** working in sequence to deliver **research-grade analysis in seconds**.**
 
 ---
 
@@ -149,7 +149,7 @@ exit    # Save and exit (history preserved)
 ---
 
 ## **How AI Powers It All - Under the Hood**  
-Investor Paradise creates a virtual team of **Four specialized AI agents**, working 24/7 for you:  
+Investor Paradise creates a virtual team of **five specialized AI agents**, working 24/7 for you:  
 
 
 1. **The Security Guard (Entry Router)**  
