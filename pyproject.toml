@@ -1,24 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "investor-paradise"
+name = "investor-paradise-cli"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI-powered NSE stock analysis agent with interactive CLI and web interface"
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Investor Paradise Team", email = "contact@example.com"}
+]
+keywords = ["stocks", "nse", "analysis", "ai", "gemini", "trading", "investment"]
 dependencies = [
-    "google-adk[web] @ git+https://github.com/google/adk-python/",
+    "google-adk @ git+https://github.com/google/adk-python/",
+    "google-genai",
+    "pandas",
     "python-dotenv",
     "fastparquet",
     "certifi",
-    "sqlalchemy>=2.0.44",
-    "aiosqlite>=0.21.0",
     "rich>=14.2.0",
+    "aiosqlite>=0.21.0",
     "chromadb>=0.4.24",
     "sentence-transformers>=2.6.1",
     "PyPDF2>=3.0.1",
-    "google-generativeai>=0.8.5",
-    "pandas>=2.3.3",
-    "pyarrow>=22.0.0",
+    "python-dateutil>=2.8.2",
+    "httpx",
+    "keyring>=24.0.0",
 ]
+
+[project.scripts]
+investor-paradise-cli = "cli:main"
+
+[project.urls]
+Homepage = "https://github.com/atulkumar2/investor_paradise"
+Repository = "https://github.com/atulkumar2/investor_paradise"
+Issues = "https://github.com/atulkumar2/investor_paradise/issues"
+
+[tool.setuptools]
+packages = ["investor_agent", "investor_agent.prompts", "investor_agent.tools"]
+py-modules = ["cli", "cli_helpers", "spinner", "download_nse_data"]
 
 [tool.ruff]
 line-length = 100

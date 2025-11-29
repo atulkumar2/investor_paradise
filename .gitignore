@@ -1,7 +1,8 @@
 # custom
-data/
+# data/
 vector-data/
 *.db
+user.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -211,7 +212,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-.github
+# .github
 .env
 
 .pylintrc
