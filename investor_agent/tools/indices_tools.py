@@ -31,18 +31,18 @@ def _should_use_sector_cache() -> bool:
     """Check if sector cache exists and is newer than source CSV."""
     if not _SECTOR_CACHE_FILE.exists():
         return False
-    
+
     sector_file = Path(__file__).parent.parent / "sector_mapping.csv"
     if not sector_file.exists():
         return False
-    
+
     cache_mtime = os.path.getmtime(_SECTOR_CACHE_FILE)
     csv_mtime = os.path.getmtime(sector_file)
-    
+
     if csv_mtime > cache_mtime:
         logger.info("Sector cache stale: CSV is newer")
         return False
-    
+
     return True
 
 
@@ -50,9 +50,9 @@ def _save_sector_cache(sector_map: dict[str, str]) -> None:
     """Save sector mapping to parquet cache."""
     if not sector_map:
         return
-    
+
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         df = pd.DataFrame(list(sector_map.items()), columns=['SYMBOL', 'SECTOR'])
         df.to_parquet(_SECTOR_CACHE_FILE, index=False)
@@ -88,10 +88,10 @@ def _load_sector_map() -> dict[str, str]:
         df = pd.read_csv(sector_file)
         _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
         logger.info(f"✅ Loaded {len(_SECTOR_MAP)} sector mappings from CSV")
-        
+
         # Save to cache for next time
         _save_sector_cache(_SECTOR_MAP)
-        
+
         return _SECTOR_MAP
     except (FileNotFoundError, pd.errors.EmptyDataError,
             pd.errors.ParserError, PermissionError):
@@ -105,24 +105,24 @@ def _should_use_indices_cache() -> bool:
     """Check if indices cache exists and is newer than source CSV files."""
     if not _INDICES_CACHE_FILE.exists():
         return False
-    
+
     indices_dir = Path(__file__).parent.parent / "data" / "NSE_indices_list"
     if not indices_dir.exists():
         return False
-    
+
     cache_mtime = os.path.getmtime(_INDICES_CACHE_FILE)
-    
+
     # Check all CSV files in latest date folder
     date_folders = sorted([d for d in indices_dir.iterdir() if d.is_dir()], reverse=True)
     if not date_folders:
         return False
-    
+
     latest_folder = date_folders[0]
     for csv_file in latest_folder.glob("*.csv"):
         if os.path.getmtime(csv_file) > cache_mtime:
             logger.info(f"Indices cache stale: {csv_file.name} is newer")
             return False
-    
+
     return True
 
 
@@ -130,9 +130,9 @@ def _save_indices_cache(indices_data: dict[str, pd.DataFrame]) -> None:
     """Save indices data to parquet cache."""
     if not indices_data:
         return
-    
+
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         # Combine all indices into single DataFrame with index_name column
         frames = []
@@ -140,7 +140,7 @@ def _save_indices_cache(indices_data: dict[str, pd.DataFrame]) -> None:
             df_copy = df.copy()
             df_copy['INDEX_NAME'] = index_name
             frames.append(df_copy)
-        
+
         combined_df = pd.concat(frames, ignore_index=True)
         combined_df.to_parquet(_INDICES_CACHE_FILE, index=False)
         logger.info(f"💾 Saved indices cache to {_INDICES_CACHE_FILE}")
@@ -162,14 +162,14 @@ def _load_indices_data() -> dict[str, pd.DataFrame]:
         try:
             logger.info("📦 Loading indices data from cache...")
             combined_df = pd.read_parquet(_INDICES_CACHE_FILE)
-            
+
             # Split back into individual index DataFrames
             _INDICES_DATA = {}
             for index_name, group in combined_df.groupby('INDEX_NAME'):
                 # Remove INDEX_NAME column and keep original data
                 df = group.drop(columns=['INDEX_NAME']).reset_index(drop=True)
                 _INDICES_DATA[index_name] = df
-            
+
             logger.info(f"✅ Loaded {len(_INDICES_DATA)} indices from cache: {', '.join(_INDICES_DATA.keys())}")
             return _INDICES_DATA
         except Exception as e:
@@ -206,10 +206,10 @@ def _load_indices_data() -> dict[str, pd.DataFrame]:
                 continue
 
         logger.info(f"✅ Loaded {len(_INDICES_DATA)} indices: {', '.join(_INDICES_DATA.keys())}")
-        
+
         # Save to cache for next time
         _save_indices_cache(_INDICES_DATA)
-        
+
         return _INDICES_DATA
 
     except Exception as e:

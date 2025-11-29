@@ -3,11 +3,13 @@
 vector-data/
 *.db
 user.json
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
+*.egg-info/
 
 # C extensions
 *.so
@@ -56,6 +58,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+.adk/
 
 # Translations
 *.mo

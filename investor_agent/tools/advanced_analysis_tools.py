@@ -33,100 +33,26 @@ def _parse_date(date_str: Optional[str]) -> Optional[date]:
     try:
         return datetime.strptime(date_str, "%Y-%m-%d").date()
     except Exception as e:
-        logger.warning(f"_parse_date: failed to parse '{date_str}': {e}")
+        logger.warning("_parse_date: failed to parse %s: %s", date_str, e)
         return None
 
-def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[str] = None, min_delivery: float = 50.0) -> str:
+
+def get_delivery_momentum(
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        min_delivery: float = 50.0,
+) -> dict:
     """
     Find stocks with consistently high delivery percentage (institutional buying).
-    
+
     Args:
         start_date: Optional start date in YYYY-MM-DD format
         end_date: Optional end date in YYYY-MM-DD format
         min_delivery: Minimum average delivery % threshold (default 50%)
-    
-    Returns:
-        List of stocks showing strong institutional interest
-        
-    High delivery % (>50%) indicates institutions are taking delivery, not just trading.
-    """
-    _ = NSESTORE.df
 
-    s_date = _parse_date(start_date)
-    e_date = _parse_date(end_date)
-
-    # Default to last 14 days
-    if not s_date or not e_date:
-        if NSESTORE.max_date:
-            e_date = NSESTORE.max_date
-            s_date = e_date - timedelta(days=14)
-        else:
-            return "❌ No data available."
-
-    df = NSESTORE.df
-    mask = (df["DATE"] >= pd.Timestamp(s_date)) & (df["DATE"] <= pd.Timestamp(e_date))
-    filtered = df[mask].copy()
-
-    if filtered.empty:
-        return f"❌ No data found between {s_date} and {e_date}"
-
-    # Calculate average delivery for each stock
-
-    results = []
-    for symbol, group in filtered.groupby("SYMBOL"):
-        stats = MetricsEngine.calculate_period_stats(group)
-        if stats and stats['avg_delivery_pct'] >= min_delivery:
-            stats['symbol'] = symbol
-            results.append(stats)
-
-    if not results:
-        return f"❌ No stocks found with delivery % >= {min_delivery}%"
-
-    # Sort by delivery percentage (highest first)
-    results.sort(key=lambda x: x['avg_delivery_pct'], reverse=True)
-    results = results[:15]  # Top 15
-
-    output = f"""### 🏦 High Delivery Momentum ({s_date} to {e_date})
-
-Stocks with avg delivery ≥ {min_delivery}% (institutional conviction)
-
-| Rank | Symbol | Delivery % | Return % | Price Trend | Signal |
-|------|--------|------------|----------|-------------|--------|
-"""
-
-    for idx, stats in enumerate(results, 1):
-        # Determine signal
-        if stats['return_pct'] > 5 and stats['avg_delivery_pct'] > 60:
-            signal = "🟢 Strong Buy"
-        elif stats['return_pct'] > 0 and stats['avg_delivery_pct'] > 50:
-            signal = "🟢 Accumulation"
-        elif stats['return_pct'] < -5 and stats['avg_delivery_pct'] > 60:
-            signal = "🔴 Distribution"
-        else:
-            signal = "🟡 Watch"
-
-        output += (f"| {idx:2d}   | {stats['symbol']:10s} | "
-                  f"{stats['avg_delivery_pct']:5.1f}% | {stats['return_pct']:+6.2f}% | "
-                  f"₹{stats['start_price']:.2f}→₹{stats['end_price']:.2f} | {signal} |\n")
-
-    output += f"\n**Total stocks with high delivery:** {len(results)}\n"
-    output += "**Interpretation:** High delivery % = Institutions taking positions (bullish if price rising)\n"
-
-    return output
-
-
-def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[str] = None, min_delivery: float = 50.0) -> dict:
-    """
-    Find stocks with consistently high delivery percentage (institutional buying).
-    
-    Args:
-        start_date: Optional start date in YYYY-MM-DD format
-        end_date: Optional end date in YYYY-MM-DD format
-        min_delivery: Minimum average delivery % threshold (default 50%)
-    
     Returns:
         Dictionary with list of stocks showing strong institutional interest
-        
+
     High delivery % (>50%) indicates institutions are taking delivery, not just trading.
     """
     _ = NSESTORE.df
@@ -144,13 +70,15 @@ def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[s
             return {"tool": "get_delivery_momentum", "error": "No data available"}
 
     df = NSESTORE.df
-    mask = (df["DATE"] >= pd.Timestamp(s_date)) & (df["DATE"] <= pd.Timestamp(e_date))
+    mask = (df["DATE"] >= pd.Timestamp(s_date)) & (
+        df["DATE"] <= pd.Timestamp(e_date)
+    )
     filtered = df[mask].copy()
 
     if filtered.empty:
         return {
             "tool": "get_delivery_momentum",
-            "error": f"No data found between {s_date} and {e_date}"
+            "error": f"No data found between {s_date} and {e_date}",
         }
 
     # Calculate average delivery for each stock
@@ -158,39 +86,39 @@ def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[s
     results = []
     for symbol, group in filtered.groupby("SYMBOL"):
         stats = MetricsEngine.calculate_period_stats(group)
-        if stats and stats['avg_delivery_pct'] >= min_delivery:
-            stats['symbol'] = symbol
+        if stats and stats["avg_delivery_pct"] >= min_delivery:
+            stats["symbol"] = symbol
             results.append(stats)
 
     if not results:
         return {
             "tool": "get_delivery_momentum",
-            "error": f"No stocks found with delivery % >= {min_delivery}%"
+            "error": f"No stocks found with delivery % >= {min_delivery}%",
         }
 
     # Sort by delivery percentage (highest first)
-    results.sort(key=lambda x: x['avg_delivery_pct'], reverse=True)
+    results.sort(key=lambda x: x["avg_delivery_pct"], reverse=True)
     results = results[:15]  # Top 15
 
     stocks = []
     for idx, stats in enumerate(results, 1):
         # Determine signal
-        if stats['return_pct'] > 5 and stats['avg_delivery_pct'] > 60:
+        if stats["return_pct"] > 5 and stats["avg_delivery_pct"] > 60:
             signal = "Strong Buy"
-        elif stats['return_pct'] > 0 and stats['avg_delivery_pct'] > 50:
+        elif stats["return_pct"] > 0 and stats["avg_delivery_pct"] > 50:
             signal = "Accumulation"
-        elif stats['return_pct'] < -5 and stats['avg_delivery_pct'] > 60:
+        elif stats["return_pct"] < -5 and stats["avg_delivery_pct"] > 60:
             signal = "Distribution"
         else:
             signal = "Watch"
 
         stocks.append({
             "rank": idx,
-            "symbol": stats['symbol'],
-            "delivery_pct": round(float(stats['avg_delivery_pct']), 1),
-            "return_pct": round(float(stats['return_pct']), 2),
-            "price_start": round(float(stats['start_price']), 2),
-            "price_end": round(float(stats['end_price']), 2),
+            "symbol": stats["symbol"],
+            "delivery_pct": round(float(stats["avg_delivery_pct"]), 1),
+            "return_pct": round(float(stats["return_pct"]), 2),
+            "price_start": round(float(stats["start_price"]), 2),
+            "price_end": round(float(stats["end_price"]), 2),
             "signal": signal
         })
 
@@ -199,28 +127,38 @@ def get_delivery_momentum(start_date: Optional[str] = None, end_date: Optional[s
         "period": {
             "start": str(s_date),
             "end": str(e_date),
-            "days": int(results[0]['days_count']),
+            "days": int(results[0]["days_count"]),
             "dates_defaulted": dates_defaulted
         },
         "min_delivery_threshold": min_delivery,
         "stocks": stocks,
         "summary": {
             "total_found": len(stocks),
-            "avg_delivery": round(sum(s['delivery_pct'] for s in stocks) / len(stocks), 1),
-            "interpretation": "High delivery % = Institutions taking positions (bullish if price rising)"
+            "avg_delivery": round(
+                sum(s["delivery_pct"] for s in stocks) / len(stocks),
+                1,
+            ),
+            "interpretation": (
+                "High delivery % = Institutions taking positions "
+                "(bullish if price rising)"
+            ),
         }
     }
 
 
-def detect_breakouts(start_date: Optional[str] = None, end_date: Optional[str] = None, threshold: float = 10.0) -> dict:
+def detect_breakouts(
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        threshold: float = 10.0,
+) -> dict:
     """
     Detect stocks that are breaking out (hitting new highs with strong momentum).
-    
+
     Args:
         start_date: Optional start date in YYYY-MM-DD format
-        end_date: Optional end date in YYYY-MM-DD format  
+        end_date: Optional end date in YYYY-MM-DD format
         threshold: Minimum return % to qualify as breakout (default 10%)
-    
+
     Returns:
         Dictionary with list of stocks showing price breakouts and strong momentum
     """
@@ -249,14 +187,17 @@ def detect_breakouts(start_date: Optional[str] = None, end_date: Optional[str] =
 
     # Filter for breakout candidates (high return + moderate volatility)
     breakouts_df = ranked[
-        (ranked['return_pct'] >= threshold) &
-        (ranked['volatility'] < 15)  # Not too volatile (avoid manipulation)
+        (ranked["return_pct"] >= threshold)
+        & (ranked["volatility"] < 15)  # Not too volatile (avoid manipulation)
     ].head(10)
 
     if breakouts_df.empty:
         return {
             "tool": "detect_breakouts",
-            "error": f"No breakout candidates found (return >= {threshold}%, volatility < 15%)"
+            "error": (
+                f"No breakout candidates found (return >= {threshold}%, "
+                "volatility < 15%)"
+            ),
         }
 
     breakouts = []
@@ -302,7 +243,7 @@ def list_available_tools() -> str:
     """
     Lists all available analysis tools with brief descriptions.
     Use this when user asks 'what can you do?' or 'what tools do you have?'
-    
+
     Returns:
         Formatted list of all available tools and their purposes
     """
@@ -312,16 +253,16 @@ def list_available_tools() -> str:
 
 1️⃣ **check_data_availability()**
    └─ Get date range and database statistics
-   
+
 2️⃣ **get_top_gainers(start_date, end_date, top_n)**
    └─ Find best performing stocks by return %
-   
+
 3️⃣ **get_top_losers(start_date, end_date, top_n)**
    └─ Find worst performing stocks by return %
-   
+
 4️⃣ **get_sector_top_performers(sector, start_date, end_date, top_n)** 🆕
    └─ Get top stocks from specific sector (Banking, IT, Auto, Pharma, FMCG, etc.)
-   
+
 5️⃣ **analyze_stock(symbol, start_date, end_date)**
    └─ Deep-dive analysis of individual stock with comprehensive metrics
 
@@ -329,13 +270,13 @@ def list_available_tools() -> str:
 
 6️⃣ **detect_volume_surge(symbol, lookback_days)**
    └─ Identify unusual volume activity (potential breakouts/news events)
-   
+
 7️⃣ **compare_stocks(symbols, start_date, end_date)**
    └─ Side-by-side comparison of multiple stocks
-   
+
 8️⃣ **get_delivery_momentum(start_date, end_date, min_delivery)**
    └─ Find stocks with high institutional buying (delivery %)
-   
+
 9️⃣ **detect_breakouts(start_date, end_date, threshold)**
    └─ Identify momentum stocks breaking out with strong signals
 
@@ -343,16 +284,16 @@ def list_available_tools() -> str:
 
 🔟 **get_52week_high_low(symbols, top_n)**
    └─ Find stocks near 52-week highs (breakouts) or lows (reversals)
-   
+
 1️⃣1️⃣ **analyze_risk_metrics(symbol, start_date, end_date)**
    └─ Advanced risk analysis: max drawdown, Sharpe ratio, volatility trends
-   
+
 1️⃣2️⃣ **find_momentum_stocks(min_return, min_consecutive_days, top_n)**
    └─ Find stocks with strong upward momentum (consecutive up days)
-   
+
 1️⃣3️⃣ **detect_reversal_candidates(lookback_days, top_n)**
    └─ Find oversold stocks showing early reversal signals
-   
+
 1️⃣4️⃣ **get_volume_price_divergence(min_divergence, top_n)**
    └─ Detect bearish/bullish divergence between price and volume
 
@@ -362,7 +303,7 @@ def list_available_tools() -> str:
    └─ Search financial news to correlate with price movements
 
 **AVAILABLE SECTORS FOR FILTERING:**
-🏦 Banking, 💻 IT, 🚗 Auto, 💊 Pharma, 🛒 FMCG, 
+🏦 Banking, 💻 IT, 🚗 Auto, 💊 Pharma, 🛒 FMCG,
 ⚡ Energy, 🏭 Metals, 📱 Telecom, 💰 Financial Services
 
 **ADVANCED METRICS AVAILABLE:**
@@ -389,14 +330,14 @@ def list_available_tools() -> str:
 def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) -> dict:
     """
     Find stocks near their 52-week highs or lows (critical psychological levels).
-    
+
     Args:
         symbols: Optional list of symbols to check (if None, scans all stocks)
         top_n: Number of stocks to return (default 20)
-    
+
     Returns:
         Dictionary with stocks trading near 52-week highs (breakout candidates) or lows (reversal plays)
-        
+
     When specific symbols are provided: Returns 52-week data for ALL requested symbols
     When symbols=None: Returns only stocks near 52-week high (within 5%) or low (within 10%)
     """
@@ -521,12 +462,12 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
 def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
     """
     Advanced risk analysis for a stock: max drawdown, Sharpe-like metrics, volatility trends.
-    
+
     Args:
         symbol: Stock symbol
         start_date: Optional start date in YYYY-MM-DD format
         end_date: Optional end date in YYYY-MM-DD format
-    
+
     Returns:
         Dictionary with comprehensive risk assessment including max drawdown, volatility analysis, and risk-adjusted returns
     """
@@ -657,15 +598,16 @@ def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date
     }
 
 
-def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3, top_n: int = 15) -> dict:
+def find_momentum_stocks(
+  min_return: float = 5.0, min_consecutive_days: int = 3, top_n: int = 15) -> dict:
     """
     Find stocks with strong momentum (consecutive up days + positive returns).
-    
+
     Args:
         min_return: Minimum return % over last 10 days (default 5%)
         min_consecutive_days: Minimum consecutive up days (default 3)
         top_n: Number of stocks to return (default 15)
-    
+
     Returns:
         Dictionary with stocks showing sustained upward momentum
     """
@@ -747,14 +689,14 @@ def find_momentum_stocks(min_return: float = 5.0, min_consecutive_days: int = 3,
 def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> dict:
     """
     Find oversold stocks showing early reversal signs (for contrarian plays).
-    
+
     Args:
         lookback_days: Period for analysis (default 30 days)
         top_n: Number of candidates to return (default 15)
-    
+
     Returns:
         Dictionary with stocks that dropped significantly but showing reversal signals
-        
+
     Reversal signals: Large decline + recent consecutive up days + volume increase
     """
     _ = NSESTORE.df
@@ -851,14 +793,14 @@ def detect_reversal_candidates(lookback_days: int = 30, top_n: int = 15) -> dict
 def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -> dict:
     """
     Detect volume-price divergence (price up but volume down = weak rally, and vice versa).
-    
+
     Args:
         min_divergence: Minimum divergence % between price and volume trends (default 20%)
         top_n: Number of stocks to return (default 15)
-    
+
     Returns:
         Dictionary with stocks showing significant volume-price divergence (warning signals)
-        
+
     Bearish divergence: Price rising but volume declining (rally losing steam)
     Bullish divergence: Price falling but volume increasing (accumulation)
     """

@@ -208,7 +208,8 @@ class TokenTracker:
 USER_FILE = "investor_agent/data/user.json"
 
 def get_or_create_user_id():
-    """Load or create persistent user_id (NOT session_id - that's managed by DatabaseSessionService)"""
+    """Load or create persistent user_id (NOT session_id -
+    that's managed by DatabaseSessionService)"""
     if os.path.exists(USER_FILE):
         try:
             with open(USER_FILE, 'r') as f:
@@ -249,9 +250,10 @@ async def list_user_sessions(session_service, app_name: str, user_id: str):
         return []
 
 
-async def select_or_create_session(session_service, app_name: str, user_id: str, force_new: bool = False):
+async def select_or_create_session(
+  session_service, app_name: str, user_id: str, force_new: bool = False):
     """Interactive session selection with option to create new or resume existing
-    
+
     Args:
         session_service: The database session service
         app_name: Name of the app
@@ -313,7 +315,8 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
             except:
                 pass
 
-        console.print(f"  [cyan]{i}.[/cyan] Session [bold]{session_id[:8]}...[/bold] [dim](Last used: {updated})[/dim]")
+        console.print(
+          f"  [cyan]{i}.[/cyan] Session [bold]{session_id[:8]}...[/bold] [dim](Last used: {updated})[/dim]")
 
     console.print(f"  [cyan]{len(sessions) + 1}.[/cyan] [green]Create new session[/green]")
 
@@ -372,7 +375,7 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
 
 def cleanup_old_sessions(db_path: str, days: int = 7):
     """Delete session records older than specified days from SQLite database.
-    
+
     Args:
         db_path: Path to sessions.db file
         days: Number of days to retain (default: 7)
@@ -417,7 +420,8 @@ def cleanup_old_sessions(db_path: str, days: int = 7):
         conn.close()
 
         if deleted_count > 0:
-            console.print(f"[dim]🗑️  Cleaned up {deleted_count} session(s) older than {days} days[/dim]")
+            console.print(
+              f"[dim]🗑️  Cleaned up {deleted_count} session(s) older than {days} days[/dim]")
     except Exception:
         # Silently ignore cleanup errors on first run
         pass

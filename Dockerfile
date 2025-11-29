@@ -22,14 +22,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
-RUN pip install uv
+RUN pip install "uv>=0.4,<1.0"
 
 # Copy application code FIRST (needed for editable install)
 COPY investor_agent/ ./investor_agent/
 COPY cli.py cli_helpers.py spinner.py ./
 
 # Copy and install dependencies
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock* .python-version ./
 RUN uv sync --frozen || uv sync
 
 # Remove build dependencies to reduce image size

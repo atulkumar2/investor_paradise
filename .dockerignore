@@ -5,6 +5,7 @@ __pycache__/
 *.pyd
 *.so
 .Python
+.adk/
 
 # Environments
 .venv/
@@ -17,13 +18,14 @@ env/
 
 # Logs and databases
 *.log
-investor_agent_logger.log
+investor_agent.log
 *.sqlite3
 *.sqlite
 *.db
 
 # IDEs / Editors
 .vscode/
+.history/
 .idea/
 *.swp
 *.swo
@@ -54,8 +56,15 @@ docs/
 !README.md
 
 # Project-specific data / large folders
-data/NSE_indices/
-data/NSE_holidays/
-data/ipynb_examples/
-data/*.docx
+data/
+investor_agent/data/
 *.feather
+
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.history/
+*.egg-info/
+investor_paradise_cli.egg-info/

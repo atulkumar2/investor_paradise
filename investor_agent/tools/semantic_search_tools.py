@@ -42,17 +42,17 @@ _SYMBOL_NAME_MAP = None
 def get_company_name(symbol: str) -> dict:
     """
     Convert stock symbol to company name using NSE symbol-company mapping.
-    
+
     Args:
         symbol: Stock ticker (e.g., 'RELIANCE', 'TCS', 'SVPGLOB')
-    
+
     Returns:
         Dictionary with symbol, company_name, and whether mapping was found
-        
+
     Example:
         >>> get_company_name('RELIANCE')
         {'symbol': 'RELIANCE', 'company_name': 'Reliance Industries Limited', 'found': True}
-        
+
         >>> get_company_name('UNKNOWN')
         {'symbol': 'UNKNOWN', 'company_name': 'UNKNOWN', 'found': False}
     """
@@ -115,20 +115,21 @@ def get_monthly_dirs_for_date_range(
     base_dir: str = "./investor_agent/data/vector-data",
 ) -> list[str]:
     """Generate list of monthly directory paths for a date range.
-    
+
     Only returns directories that actually exist on disk.
-    
+
     Args:
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
         base_dir: Base directory containing monthly subdirectories
-        
+
     Returns:
         List of existing directory paths (e.g., ['./vector-data/202407', './vector-data/202408'])
-        
+
     Example:
         >>> get_monthly_dirs_for_date_range('2024-07-15', '2024-09-20')
-        ['./investor_agent/data/vector-data/202407', './investor_agent/data/vector-data/202408', './investor_agent/data/vector-data/202409']
+        ['./investor_agent/data/vector-data/202407', 
+        './investor_agent/data/vector-data/202408', './investor_agent/data/vector-data/202409']
     """
     from datetime import datetime
 
@@ -136,7 +137,8 @@ def get_monthly_dirs_for_date_range(
         start = datetime.strptime(start_date, "%Y-%m-%d")
         end = datetime.strptime(end_date, "%Y-%m-%d")
     except ValueError:
-        logger.warning("Invalid date format (%s to %s), using all available months", start_date, end_date)
+        logger.warning("Invalid date format (%s to %s), using all available months",
+                       start_date, end_date)
         return []
 
     # Generate YYYYMM for each month in range
@@ -171,9 +173,9 @@ def init_search_resources(
     model_name: str = "intfloat/multilingual-e5-base",
 ) -> None:
     """Initialize ChromaDB collections and embedding model for semantic search.
-    
+
     Supports loading multiple monthly collections (e.g., 202407, 202408, 202409).
-    
+
     Args:
         persist_dir: Comma or colon-separated list of directories containing ChromaDB data.
                     Can be single directory or multiple (e.g., "./investor_agent/data/vector-data/202407,./investor_agent/data/vector-data/202408").
@@ -321,23 +323,25 @@ def load_collections_for_date_range(
     collection_name: str = "pdf_chunks",
 ) -> bool:
     """Dynamically load collections for specific date range.
-    
+
     This function determines which monthly directories to load based on the
     query date range and reinitializes the search resources.
-    
+
     Args:
         start_date: Start date (YYYY-MM-DD)
         end_date: End date (YYYY-MM-DD)
-        base_dir: Base directory containing monthly subdirectories (default: ./investor_agent/data/vector-data)
+        base_dir: Base directory containing monthly subdirectories (
+          default: ./investor_agent/data/vector-data)
                  Can be overridden via NEWS_BASE_DIR environment variable
         collection_name: ChromaDB collection name
-        
+
     Returns:
         True if collections loaded successfully, False otherwise
-        
+
     Example:
         >>> load_collections_for_date_range('2024-07-01', '2024-09-30')
-        # Loads ./investor_agent/data/vector-data/202407, ./investor_agent/data/vector-data/202408, ./investor_agent/data/vector-data/202409
+        # Loads ./investor_agent/data/vector-data/202407,
+        # ./investor_agent/data/vector-data/202408, ./investor_agent/data/vector-data/202409
     """
     if not _SEMANTIC_SEARCH_AVAILABLE:
         logger.error("Semantic search dependencies not available")

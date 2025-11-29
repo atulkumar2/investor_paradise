@@ -11,7 +11,7 @@ This module contains fundamental stock analysis functions:
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from investor_agent.data_engine import NSESTORE
+from investor_agent.data_engine import NSESTORE, MetricsEngine
 from investor_agent.logger import get_logger
 from investor_agent.tools.indices_tools import get_sector_stocks
 
@@ -36,7 +36,7 @@ def check_data_availability() -> str:
     """
     Returns the start and end dates of the available data in the database.
     ALWAYS call this FIRST to understand what data is available.
-    
+
     This tells you:
     - What 'Today', 'Yesterday', or 'Last Week' means in context of this data
     - The actual date range you can query
@@ -58,18 +58,20 @@ For 'latest week', use the 7 days ending on {NSESTORE.max_date}."""
     return "⚠️ No data currently loaded."
 
 
-def get_top_gainers(start_date: Optional[str] = None, end_date: Optional[str] = None, top_n: int = 10) -> dict:
+def get_top_gainers(
+  start_date: Optional[str] = None,
+  end_date: Optional[str] = None, top_n: int = 10) -> dict:
     """
     Get top performing stocks by percentage return over a period.
-    
+
     Args:
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of top stocks to return (default 10)
-    
+
     Returns:
         Dictionary with period info, top gainers list, and summary statistics
-    
+
     If dates are not provided, defaults to the last 7 days of available data.
     """
     _ = NSESTORE.df  # Ensure data loaded
@@ -115,7 +117,8 @@ def get_top_gainers(start_date: Optional[str] = None, end_date: Optional[str] = 
                 "price_start": round(float(row['start_price']), 2),
                 "price_end": round(float(row['end_price']), 2),
                 "volatility": round(float(row['volatility']), 2),
-                "delivery_pct": round(float(row['avg_delivery_pct']), 1) if row['avg_delivery_pct'] else None
+                "delivery_pct": round(float(
+                  row['avg_delivery_pct']), 1) if row['avg_delivery_pct'] else None
             }
             for idx, row in ranked.iterrows()
         ],
@@ -128,18 +131,20 @@ def get_top_gainers(start_date: Optional[str] = None, end_date: Optional[str] = 
     }
 
 
-def get_top_losers(start_date: Optional[str] = None, end_date: Optional[str] = None, top_n: int = 10) -> dict:
+def get_top_losers(
+  start_date: Optional[str] = None,
+  end_date: Optional[str] = None, top_n: int = 10) -> dict:
     """
     Get worst performing stocks by percentage return over a period.
-    
+
     Args:
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of bottom stocks to return (default 10)
-    
+
     Returns:
         Dictionary with period info, top losers list, and summary statistics
-    
+
     If dates are not provided, defaults to the last 7 days of available data.
     """
     _ = NSESTORE.df  # Ensure data loaded
@@ -208,18 +213,18 @@ def get_sector_top_performers(
 ) -> dict:
     """
     Get top performing stocks from a specific sector.
-    
+
     Args:
-        sector: Sector name (e.g., 'Banking', 'IT', 'Auto', 'Pharma', 'FMCG', 
+        sector: Sector name (e.g., 'Banking', 'IT', 'Auto', 'Pharma', 'FMCG',
                 'Energy', 'Metals', 'Telecom', 'Financial Services')
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of top stocks to return (default 5)
-    
+
     Returns:
         Dictionary with sector performers, period info, and summary statistics
-    
-    Available sectors: Banking, IT, Auto, Pharma, FMCG, Energy, Metals, 
+
+    Available sectors: Banking, IT, Auto, Pharma, FMCG, Energy, Metals,
                       Telecom, Financial Services
     """
     # Get stocks in this sector
@@ -301,15 +306,15 @@ def get_sector_top_performers(
 def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
     """
     Comprehensive analysis of a single stock over a period.
-    
+
     Args:
         symbol: Stock symbol (e.g., 'RELIANCE', 'TCS')
         start_date: Optional start date in YYYY-MM-DD format
         end_date: Optional end date in YYYY-MM-DD format
-    
+
     Returns:
         Dictionary with comprehensive stock analysis including price, technical, risk, and momentum metrics
-    
+
     If dates not provided, analyzes the last 30 days of available data.
     """
     _ = NSESTORE.df
@@ -434,11 +439,11 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
 def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
     """
     Detect unusual volume activity by comparing recent volume to historical average.
-    
+
     Args:
         symbol: Stock symbol (e.g., 'RELIANCE', 'TCS')
         lookback_days: Number of days to use for average calculation (default 20)
-    
+
     Returns:
         Dictionary with volume analysis showing if current volume is significantly higher than average
         (indicates potential breakout, news event, or institutional activity)
@@ -507,18 +512,21 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
     }
 
 
-def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
+def compare_stocks(
+  symbols: list[str],
+  start_date: Optional[str] = None,
+  end_date: Optional[str] = None) -> dict:
     """
     Side-by-side comparison of multiple stocks over the same period.
-    
+
     Args:
         symbols: List of stock symbols (e.g., ['RELIANCE', 'TCS', 'HDFCBANK'])
         start_date: Optional start date in YYYY-MM-DD format
         end_date: Optional end date in YYYY-MM-DD format
-    
+
     Returns:
         Dictionary with comparative analysis of all stocks
-        
+
     If dates not provided, uses last 30 days.
     """
     _ = NSESTORE.df
@@ -534,8 +542,6 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
             dates_defaulted = True
         else:
             return {"tool": "compare_stocks", "error": "No data available"}
-
-    from investor_agent.data_engine import MetricsEngine
 
     results = []
     for symbol in symbols:

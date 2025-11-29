@@ -4,12 +4,11 @@ This module wires together the data layer, Google ADK agents, and
 a rich-based terminal UI to provide an interactive investing assistant.
 """
 
-import sys
 import asyncio
 import os
+import sys
 import traceback
 
-import httpx
 from dotenv import load_dotenv
 from google.adk.apps.app import App, EventsCompactionConfig
 from google.adk.models.google_llm import Gemini
@@ -26,76 +25,69 @@ from cli_helpers import (
     get_or_create_user_id,
     select_or_create_session,
 )
-from investor_agent.data_engine import NSESTORE
-from investor_agent.sub_agents import create_pipeline
-from spinner import process_query_with_spinner
-from investor_agent.logger import get_logger
 from investor_agent.api_key_manager import (
     get_or_prompt_api_key,
     reset_api_key,
     show_help,
 )
-
-
-
+from investor_agent.data_engine import NSESTORE
+from investor_agent.logger import get_logger
+from investor_agent.sub_agents import create_pipeline
+from spinner import process_query_with_spinner
 
 load_dotenv()
-
-from google.adk.models.google_llm import Gemini
-from google.adk.runners import Runner
-from google.adk.apps.app import App, EventsCompactionConfig
-from google.adk.sessions import DatabaseSessionService
-from google.genai import types
-
-from investor_agent.sub_agents import create_pipeline
-from investor_agent.data_engine import NSESTORE
-from cli_helpers import (
-    AgentProgressTracker,
-    TokenTracker,
-    get_or_create_user_id,
-    console,
-    select_or_create_session,
-)
-from spinner import process_query_with_spinner
 logger = get_logger(__name__)
 
 
-async def main():
-    # Handle command-line arguments
+def _handle_cli_args() -> bool:
+    """Handle simple CLI flags; return True if execution should stop."""
     if "--reset-api-key" in sys.argv:
         reset_api_key()
-        return
-    
+        return True
+
     if "--help" in sys.argv or "-h" in sys.argv:
         show_help()
-        return
-    
-    # Get API key (will prompt if not found)
-    GOOGLE_API_KEY = get_or_prompt_api_key()
-    # set GOOGLE_API_KEY as environment variable for downstream use
-    os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-    
-    # Validate API key was retrieved
-    if not GOOGLE_API_KEY:
+        return True
+
+    return False
+
+
+def _get_api_key() -> str | None:
+    """Retrieve and validate the Google API key.
+
+    Returns the key, or None if it could not be retrieved.
+    """
+    google_api_key = get_or_prompt_api_key()
+    os.environ["GOOGLE_API_KEY"] = google_api_key or ""
+
+    if not google_api_key:
         console.print("[bold red]❌ Failed to retrieve API key[/bold red]")
-        console.print("[yellow]Please try again or set GOOGLE_API_KEY environment variable[/yellow]")
-        return
-    
+        console.print(
+            "[yellow]Please try again or set GOOGLE_API_KEY environment variable[/yellow]"
+        )
+        return None
+
+    return google_api_key
+
+
+def _initialize_data() -> None:
+    """Load NSE data and log basic context."""
     console.print("\n[bold cyan]🚀 Initializing Investor Paradise...[/bold cyan]")
     logger.info("Initializing Investor Paradise CLI")
-    
-    # 1. Pre-load Data with spinner
+
     with console.status(
         "[bold blue]📂 Loading NSE stock data...[/bold blue]", spinner="dots"
     ):
         _ = NSESTORE.df
 
     console.print(f"[green]✅ Data loaded: {len(NSESTORE.df):,} rows[/green]")
-    logger.info(f"Data loaded: {len(NSESTORE.df):,} rows")
+    logger.info("Data loaded: %d rows", len(NSESTORE.df))
     console.print(f"[cyan]📅 Database Context: {NSESTORE.get_data_context()}[/cyan]")
-    logger.info(f"Database Context: {NSESTORE.get_data_context()}")
+    logger.info("Database Context: %s", NSESTORE.get_data_context())
 
-    # 2. Configure Retry Options
+
+def _create_models(api_key: str) -> tuple[Gemini, Gemini, Gemini]:
+    """Create Gemini models with retry configuration."""
     retry_config = types.HttpRetryOptions(
         attempts=5,
         exp_base=7,
@@ -103,72 +95,65 @@ async def main():
         http_status_codes=[429, 500, 503, 504],
     )
 
-    # 3. Initialize Models with Retry Config
     logger.info("Initializing Gemini models with retry config")
-    logger.info(f"API key present: {bool(GOOGLE_API_KEY)}, length: {len(GOOGLE_API_KEY) if GOOGLE_API_KEY else 0}")
+    logger.info(
+        "API key present: %s, length: %s",
+        bool(api_key),
+        len(api_key) if api_key else 0,
+    )
+
     lite_model = Gemini(
         model="gemini-2.5-flash-lite",
-        api_key=GOOGLE_API_KEY,
+        api_key=api_key,
         retry_options=retry_config,
     )
     flash_model = Gemini(
         model="gemini-2.5-flash",
-        api_key=GOOGLE_API_KEY,
+        api_key=api_key,
         retry_options=retry_config,
     )
     pro_model = Gemini(
         model="gemini-2.5-pro",
-        api_key=GOOGLE_API_KEY,
+        api_key=api_key,
         retry_options=retry_config,
     )
-    logger.info("Models initialized: flash-lite, flash, pro")
 
-    # Create pipeline with multiple models for different agents
+    logger.info("Models initialized: flash-lite, flash, pro")
+    return lite_model, flash_model, pro_model
+
+
+def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> App:
+    """Create the ADK App and root agent pipeline."""
     logger.info("Creating agent pipeline")
     root_agent = create_pipeline(
-        entry_model=lite_model,        # Flash-Lite for Entry (simple classification)
-        market_model=flash_model, # Flash for Market (complex analysis with tools)
-        news_model=lite_model,         # Flash-Lite for News (simple google search)
-        merger_model=flash_model  # Flash for Merger (report synthesis)
+        entry_model=lite_model,
+        market_model=flash_model,
+        news_model=lite_model,
+        merger_model=flash_model,
     )
-
-    # Override root_agent's module to fix session resume issues
     root_agent.__module__ = "cli"
 
-    # 3. Create App with EventsCompactionConfig
     logger.info("Creating App with EventsCompactionConfig")
-    app = App(
-        name="investor_agent",  # Must match directory name
+    return App(
+        name="investor_agent",
         root_agent=root_agent,
         events_compaction_config=EventsCompactionConfig(
-            compaction_interval=3,  # Compact history every 3 turns
-            overlap_size=1          # Keep last turn for context
-        )
+            compaction_interval=3,
+            overlap_size=1,
+        ),
     )
 
-    # 4. Setup Session Service & Runner
+
+def _create_runner(app: App) -> tuple[Runner, DatabaseSessionService]:
+    """Create the DatabaseSessionService and Runner."""
     db_url = "sqlite+aiosqlite:///investor_agent/data/sessions.db"
-    logger.info(f"Setting up session service with database: {db_url}")
+    logger.info("Setting up session service with database: %s", db_url)
     session_service = DatabaseSessionService(db_url=db_url)
+    runner = Runner(app=app, session_service=session_service)
+    return runner, session_service
 
-    runner = Runner(
-        app=app,  # Use App instead of agent directly
-        session_service=session_service
-    )
 
-    # 5. Get persistent user_id (not session_id)
-    user_id = get_or_create_user_id()
-    console.print(f"[cyan]👤 User ID: {user_id[:8]}...[/cyan]")
-    logger.info(f"User ID: {user_id}")
-    
-    # 6. Interactive session selection (sessions stored in DatabaseSessionService)
-    session_id = await select_or_create_session(
-        session_service,
-        "investor_agent",
-        user_id,
-    )
-    logger.info(f"Session selected: {session_id}")
-
+def _print_session_banner(session_id: str) -> None:
     console.print(
         "\n[bold green]💬 Ready! Ask me about NSE stocks or just say hi![/bold green]"
     )
@@ -177,6 +162,35 @@ async def main():
         f"[dim]Session: {session_id[:8]}... | Commands: 'exit', "
         "'clear', 'switch'[/dim]\n"
     )
+
+
+async def main() -> None:
+    """Main CLI loop for Investor Paradise assistant."""
+    if _handle_cli_args():
+        return
+
+    google_api_key = _get_api_key()
+    if not google_api_key:
+        return
+
+    _initialize_data()
+
+    lite_model, flash_model, pro_model = _create_models(google_api_key)
+    app = _create_app(lite_model, flash_model, pro_model)
+    runner, session_service = _create_runner(app)
+
+    user_id = get_or_create_user_id()
+    console.print(f"[cyan]👤 User ID: {user_id[:8]}...[/cyan]")
+    logger.info("User ID: %s", user_id)
+
+    session_id = await select_or_create_session(
+        session_service,
+        "investor_agent",
+        user_id,
+    )
+    logger.info("Session selected: %s", session_id)
+
+    _print_session_banner(session_id)
 
     query_count = 0
 
@@ -202,7 +216,7 @@ async def main():
                 console.print(
                     f"[green]✅ Switched to session: {session_id[:8]}...[/green]"
                 )
-                logger.info(f"Switched to session: {session_id}")
+                logger.info("Switched to session: %s", session_id)
                 console.print(
                     f"[dim]Session: {session_id[:8]}... | Commands: 'exit', "
                     "'clear', 'switch'[/dim]\n"
@@ -226,16 +240,16 @@ async def main():
                     console.print(
                         "[yellow]🗑️  Session history cleared! Starting fresh.[/yellow]"
                     )
-                    logger.info(f"Session history cleared: {session_id}")
+                    logger.info("Session history cleared: %s", session_id)
                 except Exception as e:
                     console.print(f"[red]⚠️  Could not clear session: {e}[/red]")
-                    logger.error(f"Could not clear session: {e}")
+                    logger.error("Could not clear session: %s", e)
                 continue
 
             console.print()  # Blank line for separation
 
             query_count += 1
-            logger.info(f"Processing query #{query_count}: {user_input[:50]}...")
+            logger.info("Processing query #%s: %s...", query_count, user_input[:50])
 
             user_message = types.Content(
                 role="user",
@@ -269,7 +283,7 @@ async def main():
                     console.print(
                         "[yellow]⚠️ This session has incompatible data format.[/yellow]"
                     )
-                    logger.warning(f"Incompatible session format detected: {session_id}")
+                    logger.warning("Incompatible session format detected: %s", session_id)
                     console.print("[yellow]Creating a new session...[/yellow]\n")
                     session_id = await select_or_create_session(
                         session_service,
@@ -280,7 +294,7 @@ async def main():
                     console.print(
                         f"[green]✅ New session created: {session_id[:8]}...[/green]\n"
                     )
-                    logger.info(f"New session created: {session_id}")
+                    logger.info("New session created: %s", session_id)
                     # Retry with new session
                     displayed_agents.clear()
                     displayed_tools.clear()
@@ -296,8 +310,11 @@ async def main():
             if final_text and isinstance(final_text, str) and final_text.strip():
                 # Check if this is a markdown report (stock analysis)
                 is_markdown_report = "# 🚀 Investor Paradise" in final_text
-                logger.debug(f"Response type: {'markdown_report' if is_markdown_report else 'simple_response'}")
-                
+                logger.debug(
+                    "Response type: %s",
+                    "markdown_report" if is_markdown_report else "simple_response",
+                )
+
                 if is_markdown_report:
                     # Stock analysis report - render as markdown
                     console.print("\n")
@@ -365,8 +382,7 @@ async def main():
             break
         except Exception as e:
             console.print(f"\n[bold red]❌ Error: {e}[/bold red]")
-            logger.error(f"Error processing query: {e}", exc_info=True)
-            import traceback
+            logger.error("Error processing query", exc_info=True)
             traceback.print_exc()
 
 if __name__ == "__main__":
