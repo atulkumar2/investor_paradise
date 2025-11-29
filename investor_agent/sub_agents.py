@@ -208,4 +208,6 @@ def create_pipeline(
     merger_model = merger_model or model
 
 
-    return create_entry_router_root(entry_model, market_model, news_model, merger_model)
+    return create_entry_router_root(entry_model, market_model,
+                                    news_model, merger_model)
+  

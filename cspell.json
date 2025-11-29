@@ -4,6 +4,8 @@
     "language": "en",
     "name": "investor_paradise",
     "words": [
+        "virtualenv",
+        "Streamlit",
         "PYTHONUNBUFFERED",
         "NSESTORE",
         "agentic",

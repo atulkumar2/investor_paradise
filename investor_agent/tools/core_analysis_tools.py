@@ -13,7 +13,7 @@ from typing import Optional
 
 from investor_agent.data_engine import NSESTORE, MetricsEngine
 from investor_agent.logger import get_logger
-from investor_agent.tools.indices_tools import get_sector_stocks
+from investor_agent.tools.indices_tools import _SECTOR_MAP, get_sector_stocks
 
 logger = get_logger(__name__)
 
@@ -29,7 +29,7 @@ def _parse_date(date_str: Optional[str]) -> Optional[date]:
     try:
         return datetime.strptime(date_str, "%Y-%m-%d").date()
     except Exception as e:
-        logger.warning(f"_parse_date: failed to parse '{date_str}': {e}")
+        logger.warning("_parse_date: failed to parse '%s': %s", date_str, e)
         return None
 
 def check_data_availability() -> str:
@@ -192,7 +192,8 @@ def get_top_losers(
                 "price_start": round(float(row['start_price']), 2),
                 "price_end": round(float(row['end_price']), 2),
                 "volatility": round(float(row['volatility']), 2),
-                "delivery_pct": round(float(row['avg_delivery_pct']), 1) if row['avg_delivery_pct'] else None
+                "delivery_pct": round(float(row['avg_delivery_pct']), 1
+                              ) if row['avg_delivery_pct'] else None
             }
             for idx, row in losers.iterrows()
         ],
@@ -231,7 +232,7 @@ def get_sector_top_performers(
     sector_stocks = get_sector_stocks(sector)
 
     if not sector_stocks:
-        available_sectors = sorted(set(SECTOR_MAP.values()))
+        available_sectors = sorted(set(_SECTOR_MAP.values()))
         return {
             "tool": "get_sector_top_performers",
             "error": f"Sector '{sector}' not found. Available: {', '.join(available_sectors)}"
@@ -251,7 +252,6 @@ def get_sector_top_performers(
             return {"tool": "get_sector_top_performers", "error": "No data available"}
 
     # Analyze each stock in the sector
-    from investor_agent.data_engine import MetricsEngine
 
     results = []
     for symbol in sector_stocks:
@@ -289,7 +289,8 @@ def get_sector_top_performers(
                 "price_start": round(float(stats['start_price']), 2),
                 "price_end": round(float(stats['end_price']), 2),
                 "volatility": round(float(stats['volatility']), 2),
-                "delivery_pct": round(float(stats['avg_delivery_pct']), 1) if stats['avg_delivery_pct'] else None
+                "delivery_pct": round(float(stats['avg_delivery_pct']), 1
+                                      ) if stats['avg_delivery_pct'] else None
             }
             for idx, stats in enumerate(results)
         ],
@@ -313,7 +314,8 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
         end_date: Optional end date in YYYY-MM-DD format
 
     Returns:
-        Dictionary with comprehensive stock analysis including price, technical, risk, and momentum metrics
+        Dictionary with comprehensive stock analysis including price,
+        technical, risk, and momentum metrics
 
     If dates not provided, analyzes the last 30 days of available data.
     """
@@ -341,7 +343,6 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
         }
 
     # Calculate metrics
-    from investor_agent.data_engine import MetricsEngine
     stats = MetricsEngine.calculate_period_stats(stock_df)
 
     if not stats:
@@ -445,7 +446,8 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
         lookback_days: Number of days to use for average calculation (default 20)
 
     Returns:
-        Dictionary with volume analysis showing if current volume is significantly higher than average
+        Dictionary with volume analysis showing if current volume is
+        significantly higher than average
         (indicates potential breakout, news event, or institutional activity)
     """
     _ = NSESTORE.df

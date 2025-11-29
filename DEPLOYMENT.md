@@ -2,7 +2,7 @@
 
 This guide explains how to run and evaluate the **Investor Paradise** agent locally or in the cloud.
 
-> You need a **Google Gemini API key** to run the agent. Get one from: https://aistudio.google.com/apikey
+> You need a **Google Gemini API key** to run the agent. Get one from: [Google AI Studio APi Key](https://aistudio.google.com/apikey)
 
 ---
 

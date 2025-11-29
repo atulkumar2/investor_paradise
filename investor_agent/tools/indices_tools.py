@@ -56,9 +56,9 @@ def _save_sector_cache(sector_map: dict[str, str]) -> None:
     try:
         df = pd.DataFrame(list(sector_map.items()), columns=['SYMBOL', 'SECTOR'])
         df.to_parquet(_SECTOR_CACHE_FILE, index=False)
-        logger.info(f"💾 Saved sector cache to {_SECTOR_CACHE_FILE}")
+        logger.info("💾 Saved sector cache to %s", _SECTOR_CACHE_FILE)
     except Exception as e:
-        logger.error(f"Failed to save sector cache: {e}")
+        logger.error("Failed to save sector cache: %s", e)
 
 
 def _load_sector_map() -> dict[str, str]:
@@ -76,10 +76,10 @@ def _load_sector_map() -> dict[str, str]:
             logger.info("📦 Loading sector mapping from cache...")
             df = pd.read_parquet(_SECTOR_CACHE_FILE)
             _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
-            logger.info(f"✅ Loaded {len(_SECTOR_MAP)} sector mappings from cache")
+            logger.info("✅ Loaded %d sector mappings from cache", len(_SECTOR_MAP))
             return _SECTOR_MAP
         except Exception as e:
-            logger.warning(f"Failed to load sector cache: {e}, loading from CSV")
+            logger.warning("Failed to load sector cache: %s, loading from CSV", e)
 
     # Load from CSV
     sector_file = Path(__file__).parent.parent / "sector_mapping.csv"
@@ -87,7 +87,7 @@ def _load_sector_map() -> dict[str, str]:
         logger.info("📂 Loading sector mapping from CSV...")
         df = pd.read_csv(sector_file)
         _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
-        logger.info(f"✅ Loaded {len(_SECTOR_MAP)} sector mappings from CSV")
+        logger.info("✅ Loaded %d sector mappings from CSV", len(_SECTOR_MAP))
 
         # Save to cache for next time
         _save_sector_cache(_SECTOR_MAP)
@@ -120,7 +120,7 @@ def _should_use_indices_cache() -> bool:
     latest_folder = date_folders[0]
     for csv_file in latest_folder.glob("*.csv"):
         if os.path.getmtime(csv_file) > cache_mtime:
-            logger.info(f"Indices cache stale: {csv_file.name} is newer")
+            logger.info("Indices cache stale: %s is newer", csv_file.name)
             return False
 
     return True
@@ -143,9 +143,9 @@ def _save_indices_cache(indices_data: dict[str, pd.DataFrame]) -> None:
 
         combined_df = pd.concat(frames, ignore_index=True)
         combined_df.to_parquet(_INDICES_CACHE_FILE, index=False)
-        logger.info(f"💾 Saved indices cache to {_INDICES_CACHE_FILE}")
+        logger.info("💾 Saved indices cache to %s", _INDICES_CACHE_FILE)
     except Exception as e:
-        logger.error(f"Failed to save indices cache: {e}")
+        logger.error("Failed to save indices cache: %s", e)
 
 
 def _load_indices_data() -> dict[str, pd.DataFrame]:
@@ -170,10 +170,14 @@ def _load_indices_data() -> dict[str, pd.DataFrame]:
                 df = group.drop(columns=['INDEX_NAME']).reset_index(drop=True)
                 _INDICES_DATA[index_name] = df
 
-            logger.info(f"✅ Loaded {len(_INDICES_DATA)} indices from cache: {', '.join(_INDICES_DATA.keys())}")
+            logger.info(
+                "✅ Loaded %d indices from cache: %s",
+                len(_INDICES_DATA),
+                ", ".join(_INDICES_DATA.keys()),
+            )
             return _INDICES_DATA
         except Exception as e:
-            logger.warning(f"Failed to load indices cache: {e}, loading from CSV")
+            logger.warning("Failed to load indices cache: %s, loading from CSV", e)
 
     # Load from CSV files
     indices_dir = Path(__file__).parent.parent / "data" / "NSE_indices_list"
@@ -188,7 +192,7 @@ def _load_indices_data() -> dict[str, pd.DataFrame]:
             return _INDICES_DATA
 
         latest_folder = date_folders[0]
-        logger.info(f"📂 Loading index data from {latest_folder}")
+        logger.info("📂 Loading index data from %s", latest_folder)
 
         _INDICES_DATA = {}
         for csv_file in latest_folder.glob("*.csv"):
@@ -205,7 +209,11 @@ def _load_indices_data() -> dict[str, pd.DataFrame]:
                 logger.warning("Failed to load %s: %s", csv_file.name, e)
                 continue
 
-        logger.info(f"✅ Loaded {len(_INDICES_DATA)} indices: {', '.join(_INDICES_DATA.keys())}")
+        logger.info(
+            "✅ Loaded %d indices: %s",
+            len(_INDICES_DATA),
+            ", ".join(_INDICES_DATA.keys()),
+        )
 
         # Save to cache for next time
         _save_indices_cache(_INDICES_DATA)

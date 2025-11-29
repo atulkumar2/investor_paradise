@@ -336,7 +336,8 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
         top_n: Number of stocks to return (default 20)
 
     Returns:
-        Dictionary with stocks trading near 52-week highs (breakout candidates) or lows (reversal plays)
+        Dictionary with stocks trading near 52-week highs (breakout candidates) 
+        or lows (reversal plays)
 
     When specific symbols are provided: Returns 52-week data for ALL requested symbols
     When symbols=None: Returns only stocks near 52-week high (within 5%) or low (within 10%)
@@ -438,7 +439,13 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
             "requested_symbols": all_stocks_data,
             "summary": {
                 "total_symbols_analyzed": len(all_stocks_data),
-                "strategy": "At High/Near High = Breakout candidates (need volume + delivery >50%); At Low/Near Low = Reversal plays (need positive divergence); Mid-Range = Monitor for trend"
+                "strategy": (
+                    "At High/Near High = Breakout candidates "
+                    "(need volume + delivery >50%); "
+                    "At Low/Near Low = Reversal plays "
+                    "(need positive divergence); "
+                    "Mid-Range = Monitor for trend"
+                ),
             }
         }
     else:
@@ -454,12 +461,16 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
             "summary": {
                 "stocks_near_high": len(near_highs),
                 "stocks_near_low": len(near_lows),
-                "strategy": "52W High breakouts need volume confirmation + delivery >50%; 52W Low reversals need positive divergence"
+                "strategy": ("52W High breakouts need volume confirmation + delivery >50%; "
+                             "52W Low reversals need positive divergence")
             }
         }
 
 
-def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
+def analyze_risk_metrics(
+  symbol: str,
+  start_date: Optional[str] = None,
+  end_date: Optional[str] = None) -> dict:
     """
     Advanced risk analysis for a stock: max drawdown, Sharpe-like metrics, volatility trends.
 
@@ -469,7 +480,8 @@ def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date
         end_date: Optional end date in YYYY-MM-DD format
 
     Returns:
-        Dictionary with comprehensive risk assessment including max drawdown, volatility analysis, and risk-adjusted returns
+        Dictionary with comprehensive risk assessment including max drawdown,
+        volatility analysis, and risk-adjusted returns
     """
     _ = NSESTORE.df
 
@@ -577,8 +589,10 @@ def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date
             "current_price": round(float(stats['end_price']), 2),
             "sma_20": round(float(stats['sma_20']), 2),
             "sma_50": round(float(stats['sma_50']), 2),
-            "sma20_distance_pct": round(((stats['end_price']/stats['sma_20']-1)*100), 1) if stats['sma_20'] > 0 else 0,
-            "sma50_distance_pct": round(((stats['end_price']/stats['sma_50']-1)*100), 1) if stats['sma_50'] > 0 else 0,
+            "sma20_distance_pct": round(
+              ((stats['end_price']/stats['sma_20']-1)*100), 1) if stats['sma_20'] > 0 else 0,
+            "sma50_distance_pct": round(
+              ((stats['end_price']/stats['sma_50']-1)*100), 1) if stats['sma_50'] > 0 else 0,
             "distance_from_high_pct": round(float(stats['distance_from_high_pct']), 1),
             "distance_from_low_pct": round(float(stats['distance_from_low_pct']), 1)
         },
@@ -823,7 +837,7 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
     bearish_div = []  # Price up, volume down
     bullish_div = []  # Price down, volume up
 
-    for symbol, group in filtered.groupby("SYMBOL"):
+    for _, group in filtered.groupby("SYMBOL"):
         if len(group) < 10:
             continue
 
@@ -868,17 +882,20 @@ def get_volume_price_divergence(min_divergence: float = 20.0, top_n: int = 15) -
         },
         "min_divergence_threshold": min_divergence,
         "bearish_divergence": {
-            "description": "Price rising but volume declining - rally losing steam, potential reversal",
+            "description": ("Price rising but volume declining - "
+                            "rally losing steam, potential reversal"),
             "stocks": bearish_div[:top_n]
         },
         "bullish_divergence": {
-            "description": "Price falling but volume increasing - accumulation during decline, potential reversal",
+            "description": ("Price falling but volume increasing - "
+                            "accumulation during decline, potential reversal"),
             "stocks": bullish_div[:top_n]
         },
         "summary": {
             "bearish_count": len(bearish_div),
             "bullish_count": len(bullish_div),
-            "interpretation": "Divergences indicate potential trend reversals - confirm with delivery % and price action"
+            "interpretation": ("Divergences indicate potential trend reversals - "
+                               "confirm with delivery % and price action")
         }
     }
 
