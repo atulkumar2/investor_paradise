@@ -43,12 +43,12 @@ def get_logger(name: str):
         fh.setFormatter(fmt)
         logger.addHandler(fh)
 
-    # Attach a stream handler that safely writes UTF-8 (replace unencodable chars).
+    # Attach a stream handler that safely writes UTF-8 (replace non encodable chars).
     has_stream = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
     if not has_stream:
         # Wrap the stdout buffer with a TextIOWrapper that encodes to utf-8 and replaces errors.
         try:
-            utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, 
+            utf8_stdout = io.TextIOWrapper(sys.stdout.buffer,
                           encoding="utf-8", errors="replace", line_buffering=True)
             sh = logging.StreamHandler(stream=utf8_stdout)
         except Exception:

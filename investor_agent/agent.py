@@ -1,9 +1,9 @@
 import os
+
 from dotenv import load_dotenv
-import httpx
-import sys
-from investor_agent.logger import get_logger
 from google.genai import types
+
+from investor_agent.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -23,11 +23,12 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GOOGLE_API_KEY not found. Check .env file.")
 
-from google.adk.models.google_llm import Gemini
 from google.adk.apps.app import App, EventsCompactionConfig
-from investor_agent.sub_agents import create_pipeline
-from investor_agent.data_engine import NSESTORE
+from google.adk.models.google_llm import Gemini
+
 from investor_agent import tools
+from investor_agent.data_engine import NSESTORE
+from investor_agent.sub_agents import create_pipeline
 
 logger.info("🚀 Initializing Web App Backend...")
 

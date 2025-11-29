@@ -1,17 +1,18 @@
-from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent
+from typing import Optional
+
+from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
 from google.adk.models.google_llm import Gemini
 from google.adk.tools import google_search
-from typing import Optional
-from investor_agent import tools
-from investor_agent import schemas
+
+from investor_agent import schemas, tools
 from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
 from investor_agent.prompts import (
     ENTRY_ROUTER_PROMPT,
-    get_market_agent_prompt,
+    MERGER_AGENT_PROMPT,
     PDF_NEWS_SCOUT_PROMPT,
     WEB_NEWS_RESEARCHER_PROMPT,
-    MERGER_AGENT_PROMPT,
+    get_market_agent_prompt,
 )
 
 logger = get_logger(__name__)
@@ -39,7 +40,7 @@ def create_analysis_pipeline(
     """
     logger.info("Creating analysis pipeline with parallel news gathering")
     context_str = NSESTORE.get_data_context()
-    
+
     # Market Agent
     logger.debug("Creating MarketAnalyst agent")
     market_prompt = get_market_agent_prompt(context_str)
@@ -116,14 +117,14 @@ def create_analysis_pipeline(
         sub_agents=[pdf_news_scout, web_news_researcher],
         description="Parallel news gathering: In-house PDF database + Real-time web search"
     )
-    
+
     pipeline = SequentialAgent(
         name="AnalysisPipeline",
         sub_agents=[market_agent, news_intelligence_agent, merger_agent],
         description="Market Analysis → [PDF News Database || Web News Search] → Final Report"
     )
     logger.info("Analysis pipeline created successfully")
-    
+
     return pipeline
 
 
@@ -160,11 +161,11 @@ def create_entry_router_root(
     logger.info("Creating EntryRouter as root agent")
     # Create analysis pipeline with parallel news option
     analysis_pipeline = create_analysis_pipeline(
-        market_model, 
-        news_model, 
+        market_model,
+        news_model,
         merger_model
     )
-    
+
     # Entry Router with analysis pipeline as sub-agent (not tool)
     # This allows visibility into individual agents and their tool calls
     entry_router = LlmAgent(
@@ -174,7 +175,7 @@ def create_entry_router_root(
         sub_agents=[analysis_pipeline]  # Direct sub-agent for visibility
     )
     logger.info("EntryRouter created with AnalysisPipeline as sub-agent")
-    
+
     return entry_router
 
 
@@ -203,6 +204,6 @@ def create_pipeline(
     market_model = market_model or model
     news_model = news_model or model
     merger_model = merger_model or model
-    
+
 
     return create_entry_router_root(entry_model, market_model, news_model, merger_model)

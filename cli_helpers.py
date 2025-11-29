@@ -3,14 +3,13 @@ CLI Helper Functions and Classes
 Extracted from cli.py for better code organization
 """
 
-import os
 import json
-import uuid
+import os
 import sqlite3
+import uuid
 from datetime import datetime, timedelta
+
 from rich.console import Console
-from rich.table import Table
-from rich.text import Text
 
 console = Console()
 
@@ -37,7 +36,7 @@ TOOL_STATUS = {
     "analyze_stock": ("📊 Analyzing stock fundamentals", "blue"),
     "compare_stocks": ("⚖️ Comparing stock performance", "blue"),
     "calculate_returns": ("💹 Calculating returns", "blue"),
-    
+
     # Index & Market Cap Tools (NEW)
     "get_index_constituents": ("📋 Fetching index constituents", "cyan"),
     "list_available_indices": ("📑 Listing available indices", "cyan"),
@@ -47,7 +46,7 @@ TOOL_STATUS = {
     "get_stocks_by_market_cap": ("💰 Filtering by market cap", "blue"),
     "get_market_cap_category": ("🏷️ Classifying market cap", "cyan"),
     "get_sector_stocks": ("🏢 Getting sector stocks", "cyan"),
-    
+
     # Advanced Pattern Detection Tools
     "detect_volume_surge": ("📊 Detecting volume anomalies", "magenta"),
     "detect_breakout": ("🚀 Identifying breakout patterns", "green"),
@@ -60,16 +59,16 @@ TOOL_STATUS = {
     "find_momentum_stocks": ("🎯 Finding momentum stocks", "magenta"),
     "detect_reversal_candidates": ("🔄 Detecting reversal patterns", "yellow"),
     "get_volume_price_divergence": ("📊 Analyzing volume divergence", "blue"),
-    
+
     # Utility Tools
     "list_available_tools": ("🛠️ Listing available tools", "cyan"),
     "check_data_availability": ("📅 Checking data availability", "cyan"),
-    
+
     # Semantic Search Tools
     "get_company_name": ("🏢 Looking up company name", "cyan"),
     "load_collections_for_date_range": ("📚 Loading news collections for date range", "magenta"),
     "semantic_search": ("🔎 Searching PDF news database", "magenta"),
-    
+
     # News Tools
     "google_search": ("🔍 Searching web for news & catalysts", "yellow"),
 }
@@ -77,19 +76,19 @@ TOOL_STATUS = {
 
 class AgentProgressTracker:
     """Track and display agent pipeline progress with simple status messages"""
-    
+
     def __init__(self):
         self.current_agent = None
         self.current_tool = None
         self.start_time = datetime.now()
-    
+
     def start_agent(self, agent_name):
         """Display agent start message"""
         if agent_name in AGENT_STATUS:
             msg, color = AGENT_STATUS[agent_name]
             console.print(f"[{color}]● {msg}...[/{color}]")
         self.current_agent = agent_name
-    
+
     def add_tool(self, tool_name):
         """Track tool usage (messages shown in spinner status)"""
         if tool_name != self.current_tool:  # Avoid duplicate messages
@@ -99,16 +98,16 @@ class AgentProgressTracker:
             # if tool_name in TOOL_STATUS:
             #     msg, color = TOOL_STATUS[tool_name]
             #     console.print(f"  [dim {color}]→ {msg}[/dim {color}]")
-    
+
     def complete(self):
         """Display completion"""
         elapsed = (datetime.now() - self.start_time).total_seconds()
         console.print(f"[dim green]✓ Analysis complete ({elapsed:.1f}s)[/dim green]\n")
-    
+
     def get_table(self):
         """Deprecated - using simple messages now"""
         return None
-    
+
     def get_summary(self):
         """Get timing summary"""
         total_time = (datetime.now() - self.start_time).total_seconds()
@@ -121,14 +120,14 @@ class AgentProgressTracker:
 
 class TokenTracker:
     """Track token usage per model for accurate cost analysis"""
-    
+
     # Gemini pricing (per 1M tokens, USD - check current rates)
     PRICING = {
         'gemini-2.5-flash-lite': {'input': 0.075, 'output': 0.30},
         'gemini-2.5-flash': {'input': 0.15, 'output': 0.60},
         'gemini-2.5-pro': {'input': 1.25, 'output': 5.00},
     }
-    
+
     # Map agent names to their models
     AGENT_MODEL_MAP = {
         "EntryRouter": "gemini-2.5-flash-lite",
@@ -138,10 +137,10 @@ class TokenTracker:
         "WebNewsResearcher": "gemini-2.5-flash-lite",
         "CIO_Synthesizer": "gemini-2.5-flash"
     }
-    
+
     def __init__(self):
         self.model_usage = {}  # {model_name: {prompt: X, response: Y, total: Z}}
-    
+
     def add_usage(self, model_name: str, prompt_tokens: int, response_tokens: int):
         """Add token usage for a specific model"""
         if model_name not in self.model_usage:
@@ -150,32 +149,32 @@ class TokenTracker:
                 'response': 0,
                 'total': 0
             }
-        
+
         # Handle None values (can happen with certain event types)
         prompt_tokens = prompt_tokens or 0
         response_tokens = response_tokens or 0
-        
+
         self.model_usage[model_name]['prompt'] += prompt_tokens
         self.model_usage[model_name]['response'] += response_tokens
         self.model_usage[model_name]['total'] += (prompt_tokens + response_tokens)
-    
+
     def get_model_from_agent(self, agent_name: str) -> str:
         """Get model name from agent name"""
         return self.AGENT_MODEL_MAP.get(agent_name, "unknown")
-    
+
     def get_summary(self, show_cost: bool = True) -> str:
         """Generate formatted summary of token usage per model"""
         if not self.model_usage:
             return ""
-        
+
         lines = ["📊 Token Usage by Model:"]
         total_all = 0
         total_cost = 0.0
-        
+
         for model, usage in self.model_usage.items():
             model_display = model  # Keep full model name for clarity
             total_all += usage['total']
-            
+
             # Calculate cost
             cost = 0.0
             if model in self.PRICING:
@@ -187,18 +186,18 @@ class TokenTracker:
                 cost_str = f" (${cost:.4f})" if show_cost else ""
             else:
                 cost_str = ""
-            
+
             lines.append(
                 f"  • {model_display}: "
                 f"{usage['prompt']:,} in + {usage['response']:,} out = "
                 f"{usage['total']:,} total{cost_str}"
             )
-        
+
         if len(self.model_usage) > 1:
-            lines.append(f"  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            lines.append("  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
             cost_str = f" (${total_cost:.4f})" if show_cost and total_cost > 0 else ""
             lines.append(f"  Combined: {total_all:,} tokens{cost_str}")
-        
+
         return '\n'.join(lines)
 
 
@@ -217,16 +216,16 @@ def get_or_create_user_id():
                 return data['user_id']
         except Exception as e:
             console.print(f"[yellow]⚠️  Could not load user file: {e}[/yellow]")
-    
+
     # Create new user_id
     user_id = str(uuid.uuid4())
-    
+
     # Ensure directory exists
     os.makedirs(os.path.dirname(USER_FILE), exist_ok=True)
-    
+
     with open(USER_FILE, 'w') as f:
         json.dump({'user_id': user_id, 'created_at': datetime.now().isoformat()}, f, indent=2)
-    
+
     console.print(f"[green]✅ Created new user profile: {user_id[:8]}...[/green]")
     return user_id
 
@@ -268,9 +267,9 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
             session_id=session_id
         )
         return session_id
-    
+
     sessions = await list_user_sessions(session_service, app_name, user_id)
-    
+
     if not sessions:
         # No sessions exist, create new
         session_id = str(uuid.uuid4())
@@ -281,7 +280,7 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
         )
         console.print(f"[green]✅ Created new session: {session_id[:8]}...[/green]")
         return session_id
-    
+
     # Show existing sessions
     console.print("\n[cyan]📋 Your Sessions:[/cyan]")
     for i, session in enumerate(sessions, 1):
@@ -302,7 +301,7 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
         else:
             session_id = str(session)
             updated = 'Unknown'
-        
+
         # Format timestamp if available
         if updated != 'Unknown':
             try:
@@ -313,19 +312,19 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
                     updated = updated.strftime('%Y-%m-%d %H:%M')
             except:
                 pass
-        
+
         console.print(f"  [cyan]{i}.[/cyan] Session [bold]{session_id[:8]}...[/bold] [dim](Last used: {updated})[/dim]")
-    
+
     console.print(f"  [cyan]{len(sessions) + 1}.[/cyan] [green]Create new session[/green]")
-    
+
     choice = console.input(f"\n[bold]Select session (1-{len(sessions) + 1}):[/bold] ").strip()
-    
+
     try:
         choice_num = int(choice)
         if 1 <= choice_num <= len(sessions):
             # Resume existing session - extract session_id based on format
             selected_session = sessions[choice_num - 1]
-            
+
             if isinstance(selected_session, tuple):
                 session_id = selected_session[0]
             elif hasattr(selected_session, 'id'):
@@ -336,7 +335,7 @@ async def select_or_create_session(session_service, app_name: str, user_id: str,
                 session_id = selected_session.get('session_id') or selected_session.get('id')
             else:
                 session_id = str(selected_session)
-            
+
             console.print(f"[green]✅ Resumed session: {session_id[:8]}...[/green]")
             return session_id
         elif choice_num == len(sessions) + 1:
@@ -381,16 +380,16 @@ def cleanup_old_sessions(db_path: str, days: int = 7):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # Check which timestamp column exists
         cursor.execute("PRAGMA table_info(sessions)")
         columns = [row[1] for row in cursor.fetchall()]
-        
+
         if not columns:
             # Table doesn't exist yet
             conn.close()
             return
-        
+
         # Determine which timestamp column to use
         timestamp_col = None
         if 'updated_at' in columns:
@@ -399,15 +398,15 @@ def cleanup_old_sessions(db_path: str, days: int = 7):
             timestamp_col = 'last_accessed_at'
         elif 'created_at' in columns:
             timestamp_col = 'created_at'
-        
+
         if not timestamp_col:
             conn.close()
             return
-        
+
         # Calculate cutoff timestamp
         cutoff = datetime.now() - timedelta(days=days)
         cutoff_str = cutoff.isoformat()
-        
+
         # Delete old sessions
         cursor.execute(
             f"DELETE FROM sessions WHERE {timestamp_col} < ?",
@@ -416,9 +415,9 @@ def cleanup_old_sessions(db_path: str, days: int = 7):
         deleted_count = cursor.rowcount
         conn.commit()
         conn.close()
-        
+
         if deleted_count > 0:
             console.print(f"[dim]🗑️  Cleaned up {deleted_count} session(s) older than {days} days[/dim]")
-    except Exception as e:
+    except Exception:
         # Silently ignore cleanup errors on first run
         pass

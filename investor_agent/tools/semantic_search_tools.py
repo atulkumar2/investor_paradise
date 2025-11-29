@@ -9,8 +9,8 @@ This module handles:
 
 import os
 from pathlib import Path
-from typing import cast
 from types import SimpleNamespace
+from typing import cast
 
 import pandas as pd
 
@@ -21,8 +21,8 @@ logger = get_logger(__name__)
 # Lazy-loaded resources for semantic search
 try:
     import chromadb
-    from sentence_transformers import SentenceTransformer
     from dateutil.relativedelta import relativedelta
+    from sentence_transformers import SentenceTransformer
     _SEMANTIC_SEARCH_AVAILABLE = True
 except ImportError:
     _SEMANTIC_SEARCH_AVAILABLE = False
@@ -57,11 +57,11 @@ def get_company_name(symbol: str) -> dict:
         {'symbol': 'UNKNOWN', 'company_name': 'UNKNOWN', 'found': False}
     """
     global _SYMBOL_NAME_MAP
-    
+
     # Load mapping on first call (lazy initialization)
     if _SYMBOL_NAME_MAP is None:
         csv_path = Path(__file__).parent.parent / "nse_symbol_company_mapping.csv"
-        
+
         if not csv_path.exists():
             logger.warning("NSE symbol-company mapping not found at %s", csv_path)
             return {
@@ -70,7 +70,7 @@ def get_company_name(symbol: str) -> dict:
                 "found": False,
                 "error": "nse_symbol_company_mapping.csv not found"
             }
-        
+
         try:
             # Read CSV and create symbol->name mapping
             df = pd.read_csv(csv_path)
@@ -89,11 +89,11 @@ def get_company_name(symbol: str) -> dict:
                 "found": False,
                 "error": str(e)
             }
-    
+
     # Lookup symbol (case-insensitive)
     symbol_upper = symbol.strip().upper()
     company_name = _SYMBOL_NAME_MAP.get(symbol_upper)
-    
+
     if company_name:
         return {
             "symbol": symbol,
@@ -131,37 +131,37 @@ def get_monthly_dirs_for_date_range(
         ['./investor_agent/data/vector-data/202407', './investor_agent/data/vector-data/202408', './investor_agent/data/vector-data/202409']
     """
     from datetime import datetime
-    
+
     try:
         start = datetime.strptime(start_date, "%Y-%m-%d")
         end = datetime.strptime(end_date, "%Y-%m-%d")
     except ValueError:
         logger.warning("Invalid date format (%s to %s), using all available months", start_date, end_date)
         return []
-    
+
     # Generate YYYYMM for each month in range
     monthly_dirs = []
     current = start.replace(day=1)  # Start from beginning of month
     end_month = end.replace(day=1)
-    
+
     while current <= end_month:
         month_str = current.strftime("%Y%m")
         dir_path = f"{base_dir}/{month_str}"
-        
+
         # Only include if directory exists
         if Path(dir_path).exists() and Path(dir_path).is_dir():
             monthly_dirs.append(dir_path)
         else:
             logger.debug("Skipping non-existent directory: %s", dir_path)
-        
+
         current += relativedelta(months=1)
-    
+
     if not monthly_dirs:
         logger.warning(
             "No existing directories found for date range %s to %s in %s",
             start_date, end_date, base_dir
         )
-    
+
     return monthly_dirs
 
 
@@ -184,15 +184,15 @@ def init_search_resources(
     if not _SEMANTIC_SEARCH_AVAILABLE:
         logger.error("Cannot initialize search resources - dependencies not installed")
         return
-    
+
     # Allow reinitialization if persist_dir is explicitly provided (dynamic loading)
     if _search_state.initialized and persist_dir is None:
         logger.debug("Search resources already initialized, skipping")
         return
-    
+
     if persist_dir is None:
         persist_dir = os.environ.get("NEWS_PERSIST_DIR", "./investor_agent/data/vector-data")
-    
+
     # Split on comma and os.pathsep (':'), strip empties
     raw_parts = []
     for segment in persist_dir.split(","):
@@ -200,10 +200,10 @@ def init_search_resources(
     dirs = [p.strip() for p in raw_parts if p.strip()]
     if not dirs:
         dirs = ["./vector-data"]
-    
-    logger.info("Loading ChromaDB collections from %d director%s: %s", 
+
+    logger.info("Loading ChromaDB collections from %d director%s: %s",
                 len(dirs), "y" if len(dirs) == 1 else "ies", ", ".join(dirs))
-    
+
     # Load collections from all directories
     collections = []
     for d in dirs:
@@ -219,11 +219,11 @@ def init_search_resources(
             )
         except Exception as e:  # noqa: BLE001
             logger.warning("✗ Skipping '%s' due to load error: %s", d, e)
-    
+
     if not collections:
         logger.error("❌ No collections loaded from provided directories: %s", dirs)
         return
-    
+
     _search_state.collections = collections
     _search_state.model = SentenceTransformer(model_name)
     _search_state.initialized = True
@@ -263,11 +263,11 @@ def semantic_search(
     if not _SEMANTIC_SEARCH_AVAILABLE:
         logger.error("semantic_search called but dependencies not installed")
         return []
-    
+
     # Ensure resources are initialized
     if not _search_state.initialized:
         init_search_resources()
-    
+
     if not _search_state.collections or _search_state.model is None:
         logger.error("semantic_search called but resources not initialized")
         return []
@@ -342,26 +342,26 @@ def load_collections_for_date_range(
     if not _SEMANTIC_SEARCH_AVAILABLE:
         logger.error("Semantic search dependencies not available")
         return False
-    
+
     # Allow override via environment variable
     base_dir = os.environ.get("NEWS_BASE_DIR", base_dir)
-    
+
     # Get monthly directories for date range (only existing ones)
     monthly_dirs = get_monthly_dirs_for_date_range(start_date, end_date, base_dir)
-    
+
     if not monthly_dirs:
-        logger.error("No existing directories found for date range %s to %s in %s", 
+        logger.error("No existing directories found for date range %s to %s in %s",
                     start_date, end_date, base_dir)
         return False
-    
+
     logger.info("📅 Loading collections for date range %s to %s", start_date, end_date)
     logger.info("   Directories: %s", ", ".join([os.path.basename(d) for d in monthly_dirs]))
-    
+
     # Clear existing state to force reinitialization
     _search_state.initialized = False
     _search_state.collections = []
     _search_state.model = None
-    
+
     # Load collections from the determined directories
     collections = []
     for dir_path in monthly_dirs:
@@ -377,11 +377,11 @@ def load_collections_for_date_range(
             )
         except Exception as e:
             logger.warning("   ✗ Failed to load from %s: %s", dir_path, e)
-    
+
     if not collections:
         logger.error("❌ No collections loaded successfully")
         return False
-    
+
     # Initialize the model (only once)
     if _search_state.model is None:
         try:
@@ -390,10 +390,10 @@ def load_collections_for_date_range(
         except Exception as e:
             logger.error("   ✗ Failed to load embedding model: %s", e)
             return False
-    
+
     # Update state
     _search_state.collections = collections
     _search_state.initialized = True
-    
+
     logger.info("✅ Successfully loaded %d collection(s)", len(collections))
     return True

@@ -8,7 +8,7 @@ This module contains fundamental stock analysis functions:
 - Stock comparison
 """
 
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from investor_agent.data_engine import NSESTORE
@@ -43,7 +43,7 @@ def check_data_availability() -> str:
     """
     # Trigger load if not loaded
     _ = NSESTORE.df
-    
+
     if NSESTORE.min_date and NSESTORE.max_date:
         return f"""Data Availability Report:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -54,7 +54,7 @@ def check_data_availability() -> str:
 
 Use these dates as reference for all queries.
 For 'latest week', use the 7 days ending on {NSESTORE.max_date}."""
-    
+
     return "⚠️ No data currently loaded."
 
 
@@ -73,12 +73,12 @@ def get_top_gainers(start_date: Optional[str] = None, end_date: Optional[str] = 
     If dates are not provided, defaults to the last 7 days of available data.
     """
     _ = NSESTORE.df  # Ensure data loaded
-    
+
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
-    
+
     dates_defaulted = False
-    
+
     # Default to last 7 days if no dates provided
     if not s_date or not e_date:
         if NSESTORE.max_date:
@@ -87,17 +87,17 @@ def get_top_gainers(start_date: Optional[str] = None, end_date: Optional[str] = 
             dates_defaulted = True
         else:
             return {"error": "No data available", "gainers": [], "period": {}}
-    
+
     # Get ranked stocks
     ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=top_n, metric="return")
-    
+
     if ranked.empty:
         return {
             "error": f"No data found between {s_date} and {e_date}",
             "gainers": [],
             "period": {"start": str(s_date), "end": str(e_date)}
         }
-    
+
     # Build structured output
     return {
         "tool": "get_top_gainers",
@@ -143,12 +143,12 @@ def get_top_losers(start_date: Optional[str] = None, end_date: Optional[str] = N
     If dates are not provided, defaults to the last 7 days of available data.
     """
     _ = NSESTORE.df  # Ensure data loaded
-    
+
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
-    
+
     dates_defaulted = False
-    
+
     # Default to last 7 days if no dates provided
     if not s_date or not e_date:
         if NSESTORE.max_date:
@@ -157,20 +157,20 @@ def get_top_losers(start_date: Optional[str] = None, end_date: Optional[str] = N
             dates_defaulted = True
         else:
             return {"error": "No data available", "losers": [], "period": {}}
-    
+
     # Get all ranked stocks and take bottom N
     all_ranked = NSESTORE.get_ranked_stocks(s_date, e_date, top_n=1000, metric="return")
-    
+
     if all_ranked.empty:
         return {
             "error": f"No data found between {s_date} and {e_date}",
             "losers": [],
             "period": {"start": str(s_date), "end": str(e_date)}
         }
-    
+
     # Get bottom performers
     losers = all_ranked.tail(top_n).sort_values("return_pct")
-    
+
     return {
         "tool": "get_top_losers",
         "period": {
@@ -201,9 +201,9 @@ def get_top_losers(start_date: Optional[str] = None, end_date: Optional[str] = N
 
 
 def get_sector_top_performers(
-    sector: str, 
-    start_date: Optional[str] = None, 
-    end_date: Optional[str] = None, 
+    sector: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     top_n: int = 5
 ) -> dict:
     """
@@ -224,18 +224,18 @@ def get_sector_top_performers(
     """
     # Get stocks in this sector
     sector_stocks = get_sector_stocks(sector)
-    
+
     if not sector_stocks:
         available_sectors = sorted(set(SECTOR_MAP.values()))
         return {
             "tool": "get_sector_top_performers",
             "error": f"Sector '{sector}' not found. Available: {', '.join(available_sectors)}"
         }
-    
+
     _ = NSESTORE.df
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
-    
+
     dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
@@ -244,10 +244,10 @@ def get_sector_top_performers(
             dates_defaulted = True
         else:
             return {"tool": "get_sector_top_performers", "error": "No data available"}
-    
+
     # Analyze each stock in the sector
     from investor_agent.data_engine import MetricsEngine
-    
+
     results = []
     for symbol in sector_stocks:
         stock_df = NSESTORE.get_stock_data(symbol, s_date, e_date)
@@ -256,17 +256,17 @@ def get_sector_top_performers(
             if stats:
                 stats['symbol'] = symbol
                 results.append(stats)
-    
+
     if not results:
         return {
             "tool": "get_sector_top_performers",
             "error": f"No data found for {sector} stocks between {s_date} and {e_date}"
         }
-    
+
     # Sort by return percentage
     results.sort(key=lambda x: x['return_pct'], reverse=True)
     results = results[:top_n]
-    
+
     return {
         "tool": "get_sector_top_performers",
         "sector": sector,
@@ -313,10 +313,10 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
     If dates not provided, analyzes the last 30 days of available data.
     """
     _ = NSESTORE.df
-    
+
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
-    
+
     dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
@@ -325,32 +325,32 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
             dates_defaulted = True
         else:
             return {"tool": "analyze_stock", "error": "No data available"}
-    
+
     # Get stock data
     stock_df = NSESTORE.get_stock_data(symbol.upper(), s_date, e_date)
-    
+
     if stock_df.empty:
         return {
             "tool": "analyze_stock",
             "error": f"No data found for {symbol.upper()} between {s_date} and {e_date}"
         }
-    
+
     # Calculate metrics
     from investor_agent.data_engine import MetricsEngine
     stats = MetricsEngine.calculate_period_stats(stock_df)
-    
+
     if not stats:
         return {"tool": "analyze_stock", "error": f"Insufficient data to analyze {symbol.upper()}"}
-    
+
     # Calculate additional metrics
     price_range_pct = ((stats['period_high'] - stats['period_low']) / stats['start_price'] * 100)
     sma20_distance = ((stats['end_price'] / stats['sma_20'] - 1) * 100) if stats['sma_20'] > 0 else 0
     sma50_distance = ((stats['end_price'] / stats['sma_50'] - 1) * 100) if stats['sma_50'] > 0 else 0
-    
+
     # Determine verdict
     verdict = "Neutral"
     verdict_reason = "Sideways movement, wait for clear trend"
-    
+
     if stats['return_pct'] > 5 and stats['avg_delivery_pct'] > 60:
         verdict = "Strong Accumulation"
         verdict_reason = "High returns with high delivery suggests institutional buying"
@@ -366,7 +366,7 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
     elif stats['volatility'] > 10:
         verdict = "High Volatility"
         verdict_reason = "Significant price swings, suitable for traders not investors"
-    
+
     # Determine trend
     if stats['end_price'] > stats['sma_20'] > stats['sma_50']:
         trend = "UPTREND"
@@ -377,7 +377,7 @@ def analyze_stock(symbol: str, start_date: Optional[str] = None, end_date: Optio
     else:
         trend = "SIDEWAYS"
         trend_detail = "Mixed signals"
-    
+
     return {
         "tool": "analyze_stock",
         "symbol": symbol.upper(),
@@ -444,35 +444,35 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
         (indicates potential breakout, news event, or institutional activity)
     """
     _ = NSESTORE.df
-    
+
     if not NSESTORE.max_date:
         return {"tool": "detect_volume_surge", "error": "No data available"}
-    
+
     end_date = NSESTORE.max_date
     start_date = end_date - timedelta(days=lookback_days + 5)  # Extra buffer
-    
+
     stock_df = NSESTORE.get_stock_data(symbol.upper(), start_date, end_date)
-    
+
     if stock_df.empty or len(stock_df) < 5:
         return {
             "tool": "detect_volume_surge",
             "error": f"Insufficient data for {symbol.upper()}"
         }
-    
+
     # Get recent volume (last 3 days avg)
     recent_vol = stock_df.tail(3)['VOLUME'].mean()
-    
+
     # Get baseline average (exclude last 3 days)
     baseline_vol = stock_df.iloc[:-3]['VOLUME'].mean()
-    
+
     if baseline_vol == 0:
         return {
             "tool": "detect_volume_surge",
             "error": f"Invalid volume data for {symbol.upper()}"
         }
-    
+
     surge_pct = ((recent_vol - baseline_vol) / baseline_vol) * 100
-    
+
     # Determine verdict
     if surge_pct > 100:
         verdict = "EXTREME SURGE"
@@ -489,7 +489,7 @@ def detect_volume_surge(symbol: str, lookback_days: int = 20) -> dict:
     else:
         verdict = "NORMAL"
         interpretation = "Volume within typical range"
-    
+
     return {
         "tool": "detect_volume_surge",
         "symbol": symbol.upper(),
@@ -522,10 +522,10 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
     If dates not provided, uses last 30 days.
     """
     _ = NSESTORE.df
-    
+
     s_date = _parse_date(start_date)
     e_date = _parse_date(end_date)
-    
+
     dates_defaulted = False
     if not s_date or not e_date:
         if NSESTORE.max_date:
@@ -534,9 +534,9 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
             dates_defaulted = True
         else:
             return {"tool": "compare_stocks", "error": "No data available"}
-    
+
     from investor_agent.data_engine import MetricsEngine
-    
+
     results = []
     for symbol in symbols:
         stock_df = NSESTORE.get_stock_data(symbol.upper(), s_date, e_date)
@@ -545,13 +545,13 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
             if stats:
                 stats['symbol'] = symbol.upper()
                 results.append(stats)
-    
+
     if not results:
         return {
             "tool": "compare_stocks",
             "error": f"No data found for any symbols between {s_date} and {e_date}"
         }
-    
+
     # Determine verdict for each stock
     comparisons = []
     for stats in results:
@@ -563,7 +563,7 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
             verdict = "Weak"
         else:
             verdict = "Poor"
-        
+
         comparisons.append({
             "symbol": stats['symbol'],
             "return_pct": round(float(stats['return_pct']), 2),
@@ -573,11 +573,11 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
             "price_end": round(float(stats['end_price']), 2),
             "verdict": verdict
         })
-    
+
     # Find best and worst performers
     best = max(results, key=lambda x: x['return_pct'])
     worst = min(results, key=lambda x: x['return_pct'])
-    
+
     return {
         "tool": "compare_stocks",
         "period": {
@@ -596,5 +596,3 @@ def compare_stocks(symbols: list[str], start_date: Optional[str] = None, end_dat
             "stocks_compared": len(comparisons)
         }
     }
-
-
