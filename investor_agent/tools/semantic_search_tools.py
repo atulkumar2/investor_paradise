@@ -60,7 +60,7 @@ def get_company_name(symbol: str) -> dict:
     
     # Load mapping on first call (lazy initialization)
     if _SYMBOL_NAME_MAP is None:
-        csv_path = Path(__file__).parent.parent / "data" / "nse_symbol_company_mapping.csv"
+        csv_path = Path(__file__).parent.parent / "nse_symbol_company_mapping.csv"
         
         if not csv_path.exists():
             logger.warning("NSE symbol-company mapping not found at %s", csv_path)
