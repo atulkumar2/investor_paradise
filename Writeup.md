@@ -398,3 +398,20 @@ Just **informed decisions at your fingertips**.
 
 **Investor Paradise: Intelligent investing, simplified.**
 
+## ADK Web - Interaction
+
+**User Query : Find momentum stocks with high delivery percentage over last 15 days**
+
+
+<img width="1000" height="768" alt="Stock_momentum_1" src="https://github.com/user-attachments/assets/ef4904a2-002e-46a9-9a8c-19d90e4b48bb" />
+<img width="1000" height="768" alt="Stock_momentum_3" src="https://github.com/user-attachments/assets/db4c1807-d6e2-4fb7-ac10-8143dfa29bae" />
+
+
+## Agent Function Calling 
+<img width="722" height="838" alt="agent_in_action_2" src="https://github.com/user-attachments/assets/135b84f5-0679-45be-9e9c-df1607062c6d" />
+<img width="718" height="820" alt="agent_in_action" src="https://github.com/user-attachments/assets/6035a2e1-53ca-4ba2-8461-1acbb962e375" />
+
+
+
+
+
