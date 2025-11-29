@@ -412,6 +412,13 @@ Just **informed decisions at your fingertips**.
 <img width="718" height="820" alt="agent_in_action" src="https://github.com/user-attachments/assets/6035a2e1-53ca-4ba2-8461-1acbb962e375" />
 
 
+## CLI Interaction
+
+**User Query: Analyze RELIANCE from 2025-10-28 to 2025-11-28**
+<img width="1406" height="797" alt="cli_interaction" src="https://github.com/user-attachments/assets/3ae668e8-d276-43ed-9dfc-0108ccf21b82" />
+<img width="1637" height="813" alt="cli_interaction2" src="https://github.com/user-attachments/assets/dc1f4200-5dd1-4093-92c1-2f3620171e38" />
+<img width="1636" height="873" alt="cli_interaction3" src="https://github.com/user-attachments/assets/132d717b-ac19-4952-9aa9-89e6321f4adc" />
+
 
 
 
