@@ -120,7 +120,14 @@ Before choosing any tool, scan the user query for these keywords:
 Query Type → Tool to Use:
 - "What tools do you have?" / "List capabilities" → `list_available_tools()`
 - "Top X stocks" / "Best performers" / "Gainers" / "Market scan" (NO sector mentioned) → `get_top_gainers(start, end, top_n)`
+  - **CRITICAL**: Extract the number X from user query!
+    - "top 5 stocks" → top_n=5
+    - "top 10 stocks" → top_n=10
+    - "best 3 performers" → top_n=3
+    - "top stock" / "best stock" → top_n=1
+    - If no number specified → default top_n=10
 - "Worst performers" / "Losers" / "Falling stocks" (NO sector mentioned) → `get_top_losers(start, end, top_n)`
+  - **CRITICAL**: Extract the number from query (same rules as above)
 
 **🎯 SECTOR-SPECIFIC QUERIES (HIGH PRIORITY - CHECK FIRST):**
 - ANY mention of: Banking, Bank, IT, Technology, Software, Auto, Automobile, Pharma, Pharmaceutical, FMCG, Consumer, Energy, Oil, Gas, Metals, Steel, Telecom, Financial Services, NBFC
@@ -292,22 +299,36 @@ Same structure as gainers, but with `"losers"` array and `"worst_symbol"` / `"wo
 ---
 
 **9. get_52week_high_low() returns:**
+
+**When specific symbols requested (user asks "52 week high low for SAIL"):**
 ```python
 {{
   "tool": "get_52week_high_low",
-  "period": {{"start": "2024-11-20", "end": "2025-11-20", "days": 365, "dates_defaulted": false}},
+  "period": {{"start": "2024-11-26", "end": "2025-11-26", "days": 365}},
+  "requested_symbols": [
+    {{"symbol": "SAIL", "current_price": 110.30, "week_52_high": 125.50, "week_52_low": 85.20,
+     "distance_from_high_pct": -12.1, "distance_from_low_pct": 29.5, "signal": "Mid-Range"}}
+  ],
+  "summary": {{"total_symbols_analyzed": 1, "strategy": "At High/Near High = Breakout candidates..."}}
+}}
+```
+**How to use:** `result["requested_symbols"][0]["week_52_high"]` → 125.50, `result["requested_symbols"][0]["week_52_low"]` → 85.20
+
+**When scanning market (user asks "stocks near 52 week high"):**
+```python
+{{
+  "tool": "get_52week_high_low",
+  "period": {{"start": "2024-11-20", "end": "2025-11-20", "days": 365}},
   "near_highs": [
     {{"symbol": "TCS", "current_price": 3975.0, "week_52_high": 4000.0, 
-     "distance_pct": -0.6, "signal": "Near High"}},
-    {{"symbol": "RELIANCE", "current_price": 2890.0, "week_52_high": 2890.0,
-     "distance_pct": 0.0, "signal": "At High"}}
+     "distance_pct": -0.6, "signal": "Near High"}}
   ],
   "near_lows": [
     {{"symbol": "WIPRO", "current_price": 450.0, "week_52_low": 440.0,
      "distance_pct": 2.3, "signal": "Near Low"}}
   ],
   "summary": {{"stocks_near_high": 15, "stocks_near_low": 8, 
-             "strategy": "Breakout candidates near highs, reversal plays near lows"}}
+             "strategy": "52W High breakouts need volume confirmation + delivery >50%"}}
 }}
 ```
 **How to use:** `result["near_highs"][0]["signal"]` → "Near High", `result["summary"]["stocks_near_high"]` → 15

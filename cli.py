@@ -103,7 +103,7 @@ async def main():
         try:
             user_input = console.input("\n[bold cyan]💭 You:[/bold cyan] ")
             
-            if user_input.lower() in ["exit", "quit", "bye"]: 
+            if user_input.strip().lower() in ["exit", "quit", "bye"]: 
                 console.print("[yellow]👋 Goodbye! Happy investing![/yellow]")
                 break
             

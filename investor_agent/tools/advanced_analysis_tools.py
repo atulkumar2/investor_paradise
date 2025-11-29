@@ -398,8 +398,8 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
     Returns:
         Dictionary with stocks trading near 52-week highs (breakout candidates) or lows (reversal plays)
         
-    Near 52-week high = within 5% of high (bullish breakout)
-    Near 52-week low = within 10% of low (potential reversal/value play)
+    When specific symbols are provided: Returns 52-week data for ALL requested symbols
+    When symbols=None: Returns only stocks near 52-week high (within 5%) or low (within 10%)
     """
     _ = NSESTORE.df
     
@@ -418,8 +418,10 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
     
     near_highs = []
     near_lows = []
+    all_stocks_data = []  # For when specific symbols are requested
     
     symbols_to_check = symbols if symbols else filtered['SYMBOL'].unique()
+    user_requested_specific_symbols = symbols is not None and len(symbols) > 0
     
     for symbol in symbols_to_check:
         stock_df = filtered[filtered['SYMBOL'] == symbol]
@@ -434,47 +436,87 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
         dist_from_high = ((current_price - week_52_high) / week_52_high) * 100
         dist_from_low = ((current_price - week_52_low) / week_52_low) * 100
         
-        # Near 52-week high (within 5%)
-        if dist_from_high >= -5:
-            signal = "At High" if dist_from_high >= -1 else "Near High"
-            near_highs.append({
+        # Determine position
+        if dist_from_high >= -1:
+            signal = "At High"
+        elif dist_from_high >= -5:
+            signal = "Near High"
+        elif dist_from_low <= 1:
+            signal = "At Low"
+        elif dist_from_low <= 10:
+            signal = "Near Low"
+        else:
+            signal = "Mid-Range"
+        
+        # If user requested specific symbols, include ALL of them regardless of proximity
+        if user_requested_specific_symbols:
+            all_stocks_data.append({
                 'symbol': symbol,
                 'current_price': round(float(current_price), 2),
                 'week_52_high': round(float(week_52_high), 2),
-                'distance_pct': round(float(dist_from_high), 2),
+                'week_52_low': round(float(week_52_low), 2),
+                'distance_from_high_pct': round(float(dist_from_high), 2),
+                'distance_from_low_pct': round(float(dist_from_low), 2),
                 'signal': signal
             })
         
-        # Near 52-week low (within 10%)
-        if dist_from_low <= 10:
-            signal = "At Low" if dist_from_low <= 1 else "Near Low"
-            near_lows.append({
-                'symbol': symbol,
-                'current_price': round(float(current_price), 2),
-                'week_52_low': round(float(week_52_low), 2),
-                'distance_pct': round(float(dist_from_low), 2),
-                'signal': signal
-            })
+        # For market-wide scans (symbols=None), only include stocks near extremes
+        if not user_requested_specific_symbols:
+            # Near 52-week high (within 5%)
+            if dist_from_high >= -5:
+                near_highs.append({
+                    'symbol': symbol,
+                    'current_price': round(float(current_price), 2),
+                    'week_52_high': round(float(week_52_high), 2),
+                    'distance_pct': round(float(dist_from_high), 2),
+                    'signal': "At High" if dist_from_high >= -1 else "Near High"
+                })
+            
+            # Near 52-week low (within 10%)
+            if dist_from_low <= 10:
+                near_lows.append({
+                    'symbol': symbol,
+                    'current_price': round(float(current_price), 2),
+                    'week_52_low': round(float(week_52_low), 2),
+                    'distance_pct': round(float(dist_from_low), 2),
+                    'signal': "At Low" if dist_from_low <= 1 else "Near Low"
+                })
     
     # Sort and limit
     near_highs.sort(key=lambda x: x['distance_pct'], reverse=True)
     near_lows.sort(key=lambda x: x['distance_pct'])
     
-    return {
-        "tool": "get_52week_high_low",
-        "period": {
-            "start": str(start_date),
-            "end": str(end_date),
-            "days": 365
-        },
-        "near_highs": near_highs[:top_n],
-        "near_lows": near_lows[:top_n],
-        "summary": {
-            "stocks_near_high": len(near_highs),
-            "stocks_near_low": len(near_lows),
-            "strategy": "52W High breakouts need volume confirmation + delivery >50%; 52W Low reversals need positive divergence"
+    # Return different structure based on whether specific symbols were requested
+    if user_requested_specific_symbols:
+        return {
+            "tool": "get_52week_high_low",
+            "period": {
+                "start": str(start_date),
+                "end": str(end_date),
+                "days": 365
+            },
+            "requested_symbols": all_stocks_data,
+            "summary": {
+                "total_symbols_analyzed": len(all_stocks_data),
+                "strategy": "At High/Near High = Breakout candidates (need volume + delivery >50%); At Low/Near Low = Reversal plays (need positive divergence); Mid-Range = Monitor for trend"
+            }
         }
-    }
+    else:
+        return {
+            "tool": "get_52week_high_low",
+            "period": {
+                "start": str(start_date),
+                "end": str(end_date),
+                "days": 365
+            },
+            "near_highs": near_highs[:top_n],
+            "near_lows": near_lows[:top_n],
+            "summary": {
+                "stocks_near_high": len(near_highs),
+                "stocks_near_low": len(near_lows),
+                "strategy": "52W High breakouts need volume confirmation + delivery >50%; 52W Low reversals need positive divergence"
+            }
+        }
 
 
 def analyze_risk_metrics(symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:

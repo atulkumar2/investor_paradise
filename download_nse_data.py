@@ -105,7 +105,7 @@ class NSEBhavcopyDownloader:
         print(f"📥 Processing {date_str}...", end=" ")
         
         try:
-            # Check if file already exists
+            # Check if file already exists FIRST (before any network/delay operations)
             month_folder = self._get_month_folder(date)
             expected_csv = month_folder / f"sec_bhavdata_full_{date.strftime('%d%m%Y')}.csv"
             
@@ -113,7 +113,8 @@ class NSEBhavcopyDownloader:
                 print("⏭️  Already exists, skipping")
                 self.skipped_dates.append(date_str)
                 return True
-            # Refresh session cookie periodically (every request is safer)
+            
+            # Refresh session cookie periodically (only if we need to download)
             if not hasattr(self, '_last_cookie_time') or (time.time() - self._last_cookie_time) > 300:
                 self._get_cookie()
                 self._last_cookie_time = time.time()
@@ -277,13 +278,20 @@ class NSEBhavcopyDownloader:
                 current_date += timedelta(days=1)
                 continue
             
+            date_str_before = current_date.strftime("%d-%b-%Y")
+            skipped_count_before = len(self.skipped_dates)
+            
             if self.download_and_extract(current_date):
                 success_count += 1
             
+            # Check if this date was skipped (by comparing counts)
+            was_skipped = len(self.skipped_dates) > skipped_count_before
+            
             current_date += timedelta(days=1)
             
-            # Be respectful to NSE servers - small delay between requests
-            time.sleep(2)
+            # Be respectful to NSE servers - small delay between ACTUAL downloads only
+            if not was_skipped:
+                time.sleep(2)
         
         # Summary
         print(f"\n{'='*60}")
