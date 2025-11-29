@@ -4,6 +4,7 @@
     "language": "en",
     "name": "investor_paradise",
     "words": [
+        "PYTHONUNBUFFERED",
         "NSESTORE",
         "agentic",
         "AAATECH",
@@ -4569,6 +4570,10 @@
         "**/data/**",
         "**/vector-data/**",
         "*.log",
-        ".env"
+        ".env",
+        "uv.lock",
+        "pyproject.toml",
+        "**/__pycache__/**",
+        "**/*.pyc"
     ]
 }

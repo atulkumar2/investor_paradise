@@ -1,0 +1,72 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+.Python
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+.envdir/
+
+# Logs and databases
+*.log
+investor_agent_logger.log
+*.sqlite3
+*.sqlite
+*.db
+
+# IDEs / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.ipynb_checkpoints/
+
+# Git
+.git/
+.gitignore
+.github/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Images / screenshots
+Screenshot*.png
+*.png
+
+# Tests and tooling caches
+test_*.py
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Project-specific data / large folders
+investor_research/
+vector-data/
+news_agent/
+news_ingestion/
+nse_data_download/
+data/news_et_toi/
+data/NSE_indices/
+data/NSE_holidays/
+data/ipynb_examples/
+data/*.docx
+*.parquet
+*.feather
+*.csv.gz
+
+# Large or local data directories (kept out of image)
+investor_agent/data/
