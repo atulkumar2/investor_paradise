@@ -98,7 +98,8 @@ class MetricsEngine:
             volume_trend = 0.0
 
         # Price momentum (rate of change)
-        momentum = ((last_price - df.iloc[len(df)//2]['CLOSE']) / df.iloc[len(df)//2]['CLOSE'] * 100.0) if len(df) >= 4 else 0.0
+        momentum = ((last_price - df.iloc[len(df)//2]['CLOSE']
+                     ) / df.iloc[len(df)//2]['CLOSE'] * 100.0) if len(df) >= 4 else 0.0
 
         return {
             # Basic metrics

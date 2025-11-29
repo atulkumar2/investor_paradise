@@ -58,9 +58,12 @@ retry_config = types.HttpRetryOptions(
 
 # --- 4. Initialize Model and Root Agent ---
 # Default: Use Flash-Lite for all agents (fast, cost-effective)
-lite_model = Gemini(model="gemini-2.5-flash-lite", api_key=GOOGLE_API_KEY, retry_options=retry_config)
-flash_model = Gemini(model="gemini-2.5-flash", api_key=GOOGLE_API_KEY, retry_options=retry_config)
-pro_model = Gemini(model="gemini-2.5-pro", api_key=GOOGLE_API_KEY, retry_options=retry_config)
+lite_model = Gemini(model="gemini-2.5-flash-lite",
+                    api_key=GOOGLE_API_KEY, retry_options=retry_config)
+flash_model = Gemini(model="gemini-2.5-flash",
+                     api_key=GOOGLE_API_KEY, retry_options=retry_config)
+pro_model = Gemini(model="gemini-2.5-pro",
+                   api_key=GOOGLE_API_KEY, retry_options=retry_config)
 
 # Create pipeline with optimized model selection
 root_agent = create_pipeline(

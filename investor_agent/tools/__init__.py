@@ -31,6 +31,7 @@ from investor_agent.tools.indices_tools import (
     list_available_indices,
 )
 from investor_agent.tools.semantic_search_tools import (
+    _SEMANTIC_SEARCH_AVAILABLE,
     get_company_name,
     get_monthly_dirs_for_date_range,
     init_search_resources,
@@ -66,6 +67,7 @@ __all__ = [
     'detect_reversal_candidates',
     'get_volume_price_divergence',
     # Semantic search tools
+    '_SEMANTIC_SEARCH_AVAILABLE',
     'get_company_name',
     'get_monthly_dirs_for_date_range',
     'init_search_resources',
