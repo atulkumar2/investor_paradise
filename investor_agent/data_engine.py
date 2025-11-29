@@ -1,3 +1,5 @@
+"""Data loading and caching utilities for NSE market data used by agents."""
+
 import os
 import warnings
 from datetime import date
@@ -18,7 +20,7 @@ class MetricsEngine:
     def calculate_period_stats(df: pd.DataFrame) -> Optional[Dict[str, float]]:
         """
         Calculate stock performance metrics over a period.
-        
+
         Input: DataFrame with columns [DATE, OPEN, CLOSE, HIGH, LOW, VOLUME, DELIV_PER]
         Returns: Dict with return_pct, volatility, avg_delivery, price info, etc.
         """
@@ -248,13 +250,13 @@ class NSEDataStore:
                          top_n: int = 10, metric: str = "return") -> pd.DataFrame:
         """
         Rank stocks by performance metric over a date range.
-        
+
         Args:
             start_date: Period start date
             end_date: Period end date
             top_n: Number of top stocks to return
             metric: 'return' or 'volume'
-            
+
         Returns:
             DataFrame with ranked stocks and their metrics
         """

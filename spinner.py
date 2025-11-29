@@ -12,11 +12,19 @@ from rich.live import Live
 from cli_helpers import AGENT_STATUS, TOOL_STATUS, console
 
 
-async def process_query_with_spinner(runner, user_id, session_id, user_message,
-                                     spinner_frames, tracker, token_tracker,
-                                     displayed_agents, displayed_tools):
+async def process_query_with_spinner(
+    runner,
+    user_id,
+    session_id,
+    user_message,
+    spinner_frames,
+    tracker,
+    token_tracker,
+    displayed_agents,
+    displayed_tools,
+):
     """Process a query with animated spinner showing agent and tool progress.
-    
+
     Args:
         runner: ADK Runner instance
         user_id: User identifier
@@ -27,7 +35,7 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
         token_tracker: TokenTracker instance
         displayed_agents: Set to track which agents have been shown
         displayed_tools: Set to track which tools have been shown
-    
+
     Returns:
         str: The final response text from the agent
     """
@@ -43,12 +51,18 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
         while animation_running[0]:
             spinner_index[0] = (spinner_index[0] + 1) % len(spinner_frames)
             spinner = spinner_frames[spinner_index[0]]
-            live.update(f"[bold cyan]{spinner}[/bold cyan] [dim]{current_status[0]}...[/dim]")
+            live.update(
+                f"[bold cyan]{spinner}[/bold cyan] "
+                f"[dim]{current_status[0]}...[/dim]"
+            )
             await asyncio.sleep(0.1)  # 10 FPS = smooth animation
 
     with Live(console=console, refresh_per_second=10, transient=True) as live:
         # Start with initial spinner
-        live.update(f"[bold cyan]{spinner}[/bold cyan] [dim]{current_status[0]}...[/dim]")
+        live.update(
+            f"[bold cyan]{spinner}[/bold cyan] "
+            f"[dim]{current_status[0]}...[/dim]"
+        )
 
         # Start background animation task for smooth continuous animation
         animation_task = asyncio.create_task(animate_spinner(live))
@@ -58,7 +72,7 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
             async for event in runner.run_async(
                 user_id=user_id,
                 session_id=session_id,
-                new_message=user_message
+                new_message=user_message,
             ):
                 # Track token usage per model
                 if hasattr(event, 'usage_metadata') and event.usage_metadata:
@@ -70,7 +84,9 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
                         model_name = token_tracker.get_model_from_agent(event.author)
 
                     # Track usage
-                    if hasattr(usage, 'prompt_token_count') and hasattr(usage, 'candidates_token_count'):
+                    if hasattr(usage, 'prompt_token_count') and hasattr(
+                        usage, 'candidates_token_count'
+                    ):
                         token_tracker.add_usage(
                             model_name,
                             usage.prompt_token_count,
@@ -78,7 +94,11 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
                         )
 
                 # Update status message based on agent
-                if hasattr(event, 'author') and event.author and event.author not in displayed_agents:
+                if (
+                    hasattr(event, 'author')
+                    and event.author
+                    and event.author not in displayed_agents
+                ):
                     displayed_agents.add(event.author)
 
                     # Use centralized agent messages from cli_helpers
@@ -90,16 +110,33 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
                     tracker.start_agent(event.author)
 
                 # Detect compaction events for logging
-                if hasattr(event, 'actions') and event.actions and hasattr(event.actions, 'compaction'):
+                if (
+                    hasattr(event, 'actions')
+                    and event.actions
+                    and hasattr(event.actions, 'compaction')
+                ):
                     if event.actions.compaction is not None:
-                        console.print(f"\n[dim yellow]📦 Context compacted: {event.actions.compaction.start_timestamp:.2f} → {event.actions.compaction.end_timestamp:.2f}[/dim yellow]")
+                        console.print(
+                            "\n[dim yellow]📦 Context compacted: "
+                            f"{event.actions.compaction.start_timestamp:.2f} "
+                            f"→ {event.actions.compaction.end_timestamp:.2f}[/dim yellow]"
+                        )
 
                 # Detect function calls (tools) in event content
-                if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts') and event.content.parts:
+                if (
+                    hasattr(event, 'content')
+                    and event.content
+                    and hasattr(event.content, 'parts')
+                    and event.content.parts
+                ):
                     for part in event.content.parts:
                         if hasattr(part, 'function_call') and part.function_call:
                             func_call = part.function_call
-                            tool_name = func_call.name if hasattr(func_call, 'name') else str(func_call)
+                            tool_name = (
+                                func_call.name
+                                if hasattr(func_call, 'name')
+                                else str(func_call)
+                            )
 
                             tracker.add_tool(tool_name)
 
@@ -109,7 +146,9 @@ async def process_query_with_spinner(runner, user_id, session_id, user_message,
                                 # Print tool message outside Live display so it persists
                                 if tool_name in TOOL_STATUS:
                                     msg, color = TOOL_STATUS[tool_name]
-                                    console.print(f"  [dim {color}]→ {msg}[/dim {color}]")
+                                    console.print(
+                                        f"  [dim {color}]→ {msg}[/dim {color}]"
+                                    )
                                     current_status[0] = msg
                                 # else:
                                 #     console.print(f"  [dim]→ 🔧 Using {tool_name}[/dim]")

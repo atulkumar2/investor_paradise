@@ -1,3 +1,5 @@
+"""Factory functions for composing ADK agents used by the CLI."""
+
 from typing import Optional
 
 from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
@@ -25,14 +27,14 @@ def create_analysis_pipeline(
 ) -> SequentialAgent:
     """
     Creates the analysis sub-pipeline with parallel news gathering.
-    
+
     Architecture:
         Market → [PDF News Scout || Web News Researcher] → CIO
         ├─ Faster (both news agents run simultaneously)
         ├─ PDFNewsScout: Searches in-house PDF database (RAG/semantic search)
         ├─ WebNewsResearcher: Searches real-time web news (Google)
         └─ More efficient use of API quota
-    
+
     Args:
         market_model: Gemini model for market analysis
         news_model: Gemini model for news agents
@@ -136,7 +138,7 @@ def create_entry_router_root(
 ) -> LlmAgent:
     """
     Creates EntryRouter as root agent with analysis pipeline as a tool.
-    
+
     Architecture:
     EntryRouter (root LlmAgent)
       └── AnalysisPipeline (SequentialAgent)
@@ -145,13 +147,13 @@ def create_entry_router_root(
            │    ├── PDFNewsScout (in-house PDF database via RAG)
            │    └── WebNewsResearcher (real-time Google search)
            └── CIO_Synthesizer
-    
+
     Benefits:
     - EventsCompactionConfig works (single LlmAgent root)
     - Cleaner separation: routing vs analysis
     - Can skip pipeline for greetings (faster)
     - Parallel news gathering (25% faster)
-    
+
     Args:
         entry_model: Model for entry router
         market_model: Model for market analysis
@@ -188,14 +190,14 @@ def create_pipeline(
 ) -> LlmAgent:
     """
     Creates the agent architecture.
-    
+
     Args:
         model: Default Gemini model for all agents
         entry_model: Optional separate model for Entry/Router Agent
         market_model: Optional separate model for Market Analyst
         news_model: Optional separate model for News Analyst
         merger_model: Optional separate model for CIO/Merger Agent
-    
+
     Returns:
         Root agent (EntryRouter)
     """

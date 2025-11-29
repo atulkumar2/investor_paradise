@@ -1,15 +1,17 @@
+"""Logging configuration for investor_agent package."""
+
 import io
 import logging
 import os
 import sys
 
+_LOG_FILE = "investor_agent.log"
+
 # Clean up any previous logs
-for log_file in ["logger.log", "web.log", "tunnel.log"]:
+for log_file in [_LOG_FILE, "web.log", "tunnel.log"]:
     if os.path.exists(log_file):
         os.remove(log_file)
         print(f"🧹 Cleaned up {log_file}")
-
-_LOG_FILE = "logger.log"
 
 # Configure root logging to write to the log file if not already configured.
 if not logging.getLogger().handlers:

@@ -1,34 +1,25 @@
+"""Helper functions for building and running Gemini-based agents."""
+
 import os
 
 from dotenv import load_dotenv
+from google.adk.apps.app import App, EventsCompactionConfig
+from google.adk.models.google_llm import Gemini
 from google.genai import types
 
+from investor_agent import tools
+from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
+from investor_agent.sub_agents import create_pipeline
 
 logger = get_logger(__name__)
 
-# --- 1. SSL Patch (Crucial for your env) ---
-# original_init = httpx.AsyncClient.__init__
-# def patched_init(self, *args, **kwargs):
-#     kwargs['verify'] = False
-#     original_init(self, *args, **kwargs)
-# httpx.AsyncClient._init_ = patched_init
-# ------------------------------------------
 
 # --- 2. Load Config, logging & Data ---
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GOOGLE_API_KEY not found. Check .env file.")
-
-from google.adk.apps.app import App, EventsCompactionConfig
-from google.adk.models.google_llm import Gemini
-
-from investor_agent import tools
-from investor_agent.data_engine import NSESTORE
-from investor_agent.sub_agents import create_pipeline
 
 logger.info("🚀 Initializing Web App Backend...")
 
@@ -39,8 +30,8 @@ logger.info("🚀 Initializing Web App Backend...")
 # 3. ADK web server is ready immediately after startup
 logger.info("📂 Pre-loading NSE stock data...")
 _ = NSESTORE.df  # Force immediate load (triggers cache check or CSV load)
-logger.info(f"✅ Data loaded: {len(NSESTORE.df):,} rows, {NSESTORE.total_symbols:,} symbols")
-logger.info(f"📅 Date range: {NSESTORE.get_data_context()}")
+logger.info("✅ Data loaded: %d rows, %d symbols", len(NSESTORE.df), NSESTORE.total_symbols)
+logger.info("📅 Date range: %s", NSESTORE.get_data_context())
 
 # --- Pre-load News Search Resources ---
 # Note: Collections are now loaded dynamically based on query date range
@@ -49,13 +40,12 @@ logger.info(f"📅 Date range: {NSESTORE.get_data_context()}")
 logger.info("📰 Validating news search dependencies (ChromaDB + embeddings)...")
 try:
     # Just check if we can import the dependencies
-    from investor_agent import tools
     if tools._SEMANTIC_SEARCH_AVAILABLE:
         logger.info("✅ News search dependencies available (will load collections dynamically)")
     else:
         logger.warning("⚠️ News search dependencies missing (chromadb, sentence-transformers)")
 except Exception as e:
-    logger.warning(f"⚠️ News search validation failed: {e}")
+    logger.warning("⚠️ News search validation failed: %s", e)
     logger.warning("News semantic search will fallback to google_search only")
 
 # --- 3. Configure Retry Options ---
