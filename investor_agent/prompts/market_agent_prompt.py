@@ -104,16 +104,58 @@ Your JSON output will be consumed by:
 **STEP 4: TOOL USAGE DECISION TREE**
 
 **🚨 CRITICAL: CHECK FOR SECTOR KEYWORDS FIRST**
-Before choosing any tool, scan the user query for these keywords:
-- Banking/Bank → Use `get_sector_top_performers("Banking", ...)`
-- IT/Tech/Software → Use `get_sector_top_performers("IT", ...)`
-- Auto/Automobile/Car → Use `get_sector_top_performers("Auto", ...)`
-- Pharma/Healthcare/Drug → Use `get_sector_top_performers("Pharma", ...)`
-- FMCG/Consumer → Use `get_sector_top_performers("FMCG", ...)`
-- Energy/Oil/Gas → Use `get_sector_top_performers("Energy", ...)`
-- Metals/Steel → Use `get_sector_top_performers("Metals", ...)`
-- Telecom/Mobile → Use `get_sector_top_performers("Telecom", ...)`
-- NBFC/Financial Services → Use `get_sector_top_performers("Financial Services", ...)`
+Before choosing any tool, scan the user query for these keywords (31 sectors supported):
+
+**Banking & Financial:**
+- Banking/Bank/Banks → Use `get_sector_top_performers("Banking", ...)`
+- NBFC/Financial Services/Finance Companies → Use `get_sector_top_performers("Financial Services", ...)`
+
+**Technology:**
+- IT/Tech/Technology/Software → Use `get_sector_top_performers("IT", ...)`
+
+**Automobile:**
+- Auto/Automobile/Car/Vehicle → Use `get_sector_top_performers("Automobile", ...)`
+- Auto Ancillary/Auto Parts/Auto Components → Use `get_sector_top_performers("Auto Ancillary", ...)`
+
+**Pharma & Healthcare:**
+- Pharma/Pharmaceutical/Drug → Use `get_sector_top_performers("Pharma", ...)`
+- Healthcare/Hospital/Medical → Use `get_sector_top_performers("Healthcare", ...)`
+- Biotechnology/Biotech → Use `get_sector_top_performers("Biotechnology", ...)`
+
+**Consumer:**
+- FMCG/Consumer Goods/Fast Moving Consumer → Use `get_sector_top_performers("FMCG", ...)`
+- Consumer Durables/Appliances/Electronics → Use `get_sector_top_performers("Consumer Durables", ...)`
+- Consumer Services/Retail/Hospitality → Use `get_sector_top_performers("Consumer Services", ...)`
+
+**Infrastructure & Materials:**
+- Construction Materials/Cement/Building Materials → Use `get_sector_top_performers("Construction Materials", ...)`
+- Capital Goods/Engineering/Machinery → Use `get_sector_top_performers("Capital Goods", ...)`
+- Construction/Infrastructure/Civil → Use `get_sector_top_performers("Construction", ...)`
+- Metals/Steel/Mining/Metal → Use `get_sector_top_performers("Metals & Mining", ...)`
+
+**Energy & Oil:**
+- Energy/Power Generation/Electricity → Use `get_sector_top_performers("Power", ...)`
+- Oil/Gas/Petroleum/Fuel → Use `get_sector_top_performers("Oil Gas & Consumable Fuels", ...)`
+- Petrochemicals/Refining → Use `get_sector_top_performers("Petrochemicals", ...)`
+
+**Chemicals & Materials:**
+- Chemicals/Chemical Industry → Use `get_sector_top_performers("Chemicals", ...)`
+- Fertilizers/Agrochemicals → Use `get_sector_top_performers("Fertilizers", ...)`
+
+**Media & Telecom:**
+- Media/Entertainment/Broadcasting → Use `get_sector_top_performers("Media", ...)`
+- Telecom/Telecommunications/Mobile → Use `get_sector_top_performers("Telecom", ...)`
+
+**Realty & Services:**
+- Realty/Real Estate/Property → Use `get_sector_top_performers("Realty", ...)`
+- Services/Business Services → Use `get_sector_top_performers("Services", ...)`
+
+**Other Sectors:**
+- Textiles/Fabric/Garment → Use `get_sector_top_performers("Textiles", ...)`
+- Forest Materials/Paper/Wood → Use `get_sector_top_performers("Forest Materials", ...)`
+- Agri/Agriculture/Farming → Use `get_sector_top_performers("Agri", ...)`
+- Utilities/Water/Gas Distribution → Use `get_sector_top_performers("Utilities", ...)`
+- Diversified → Use `get_sector_top_performers("Diversified", ...)`
 
 **IF NO SECTOR KEYWORD → Use market-wide tools (get_top_gainers/losers)**
 
@@ -130,26 +172,49 @@ Query Type → Tool to Use:
   - **CRITICAL**: Extract the number from query (same rules as above)
 
 **🎯 SECTOR-SPECIFIC QUERIES (HIGH PRIORITY - CHECK FIRST):**
-- ANY mention of: Banking, Bank, IT, Technology, Software, Auto, Automobile, Pharma, Pharmaceutical, FMCG, Consumer, Energy, Oil, Gas, Metals, Steel, Telecom, Financial Services, NBFC
+- ANY mention of sector keywords from the 31 supported sectors
 - Examples that MUST use `get_sector_top_performers()`:
   - "top 5 banking stocks" → `get_sector_top_performers("Banking", start, end, 5)`
   - "best IT performers" → `get_sector_top_performers("IT", start, end, 10)`
   - "pharma sector leaders" → `get_sector_top_performers("Pharma", start, end, 10)`
-  - "which automobile stocks are doing well" → `get_sector_top_performers("Auto", start, end, 10)`
+  - "cement companies performance" → `get_sector_top_performers("Construction Materials", start, end, 10)`
+  - "automobile stocks doing well" → `get_sector_top_performers("Automobile", start, end, 10)`
   - "technology sector gainers" → `get_sector_top_performers("IT", start, end, 10)`
   - "NBFC stocks performance" → `get_sector_top_performers("Financial Services", start, end, 10)`
-  - "oil and gas stocks" → `get_sector_top_performers("Energy", start, end, 10)`
-  - "steel companies performance" → `get_sector_top_performers("Metals", start, end, 10)`
+  - "oil and gas stocks" → `get_sector_top_performers("Oil Gas & Consumable Fuels", start, end, 10)`
+  - "steel companies performance" → `get_sector_top_performers("Metals & Mining", start, end, 10)`
+  - "power sector stocks" → `get_sector_top_performers("Power", start, end, 10)`
+  - "textile industry" → `get_sector_top_performers("Textiles", start, end, 10)`
+  - "capital goods companies" → `get_sector_top_performers("Capital Goods", start, end, 10)`
 
 **SECTOR KEYWORD MAPPING (Use for extraction):**
-- Banking/Bank/Banks/PSU Bank → "Banking"
+- Banking/Bank/Banks → "Banking"
 - IT/Technology/Software/Tech → "IT"
-- Auto/Automobile/Car/Vehicle → "Auto"
-- Pharma/Pharmaceutical/Healthcare/Drug → "Pharma"
+- Automobile/Auto/Car/Vehicle → "Automobile"
+- Auto Ancillary/Auto Parts/Auto Components → "Auto Ancillary"
+- Pharma/Pharmaceutical/Drug → "Pharma"
+- Healthcare/Hospital/Medical → "Healthcare"
+- Biotechnology/Biotech → "Biotechnology"
 - FMCG/Consumer Goods/Fast Moving Consumer → "FMCG"
-- Energy/Oil/Gas/Petroleum → "Energy"
-- Metals/Steel/Mining/Metal → "Metals"
+- Consumer Durables/Appliances/Electronics → "Consumer Durables"
+- Consumer Services/Retail/Hospitality → "Consumer Services"
+- Construction Materials/Cement/Building Materials → "Construction Materials"
+- Capital Goods/Engineering/Machinery → "Capital Goods"
+- Construction/Infrastructure/Civil → "Construction"
+- Metals/Steel/Mining/Metal → "Metals & Mining"
+- Power/Electricity/Power Generation → "Power"
+- Oil/Gas/Petroleum/Fuel → "Oil Gas & Consumable Fuels"
+- Petrochemicals/Refining → "Petrochemicals"
+- Chemicals/Chemical Industry → "Chemicals"
+- Fertilizers/Agrochemicals → "Fertilizers"
+- Media/Entertainment/Broadcasting → "Media"
 - Telecom/Telecommunications/Mobile → "Telecom"
+- Realty/Real Estate/Property → "Realty"
+- Services/Business Services → "Services"
+- Textiles/Fabric/Garment → "Textiles"
+- Forest Materials/Paper/Wood → "Forest Materials"
+- Agri/Agriculture/Farming → "Agri"
+- Utilities/Water/Gas Distribution → "Utilities"
 - NBFC/Financial Services/Finance Companies → "Financial Services"
 
 **OTHER QUERIES:**
@@ -165,7 +230,12 @@ Query Type → Tool to Use:
 - "Divergence" / "Volume vs price" → `get_volume_price_divergence(min_divergence, top_n)`
 - Any query starting with time reference → `check_data_availability()` FIRST
 
-**📌 SECTOR KEYWORDS:** Banking, IT, Auto, Pharma, FMCG, Energy, Metals, Telecom, Financial Services
+**📌 SUPPORTED SECTORS (31 Total):** 
+Banking, IT, Automobile, Auto Ancillary, Pharma, Healthcare, Biotechnology, FMCG, 
+Consumer Durables, Consumer Services, Construction Materials, Capital Goods, Construction, 
+Metals & Mining, Power, Oil Gas & Consumable Fuels, Petrochemicals, Chemicals, Fertilizers, 
+Media, Telecom, Realty, Services, Textiles, Forest Materials, Agri, Utilities, 
+Financial Services, Consumer Goods, Diversified, Energy
 
 ---
 

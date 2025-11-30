@@ -283,6 +283,10 @@ def list_available_indices() -> dict[str, int]:
 def get_sectoral_indices() -> dict[str, str]:
     """
     Get mapping of sectors to their NSE sectoral index names.
+    
+    Note: Only sectors with dedicated NSE indices are mapped here.
+    Other sectors (like Construction Materials, Textiles, etc.) are supported
+    through CSV-based sector_mapping and will work with get_sector_stocks().
 
     Returns:
         Dictionary mapping sector category to index name
@@ -292,22 +296,64 @@ def get_sectoral_indices() -> dict[str, str]:
         {'Banking': 'NIFTYBANK', 'IT': 'NIFTYIT', 'Auto': 'NIFTYAUTO', ...}
     """
     return {
+        # Banking & Financial
         'Banking': 'NIFTYBANK',
-        'IT': 'NIFTYIT',
-        'Auto': 'NIFTYAUTO',
-        'Pharma': 'NIFTYPHARMA',
-        'FMCG': 'NIFTYFMCG',
-        'Metals': 'NIFTYMETAL',
-        'Energy': 'NIFTYOILGAS',
-        'Oil & Gas': 'NIFTYOILGAS',
-        'Healthcare': 'NIFTYHEALTHCARE',
-        'Media': 'NIFTYMEDIA',
-        'Realty': 'NIFTYREALTY',
         'Financial Services': 'NIFTYFINANCE',
-        'Consumer Durables': 'NIFTYCONSUMERDURABLES',
-        'Chemicals': 'NIFTYCHEMICALS',
         'Private Banks': 'NIFTYPRIVATEBANK',
         'PSU Banks': 'NIFTYPSUBANK',
+        
+        # Technology
+        'IT': 'NIFTYIT',
+        
+        # Auto & Manufacturing
+        'Automobile': 'NIFTYAUTO',
+        'Auto': 'NIFTYAUTO',
+        
+        # Pharma & Healthcare
+        'Pharma': 'NIFTYPHARMA',
+        'Healthcare': 'NIFTYHEALTHCARE',
+        
+        # Consumer
+        'FMCG': 'NIFTYFMCG',
+        'Consumer Durables': 'NIFTYCONSUMERDURABLES',
+        
+        # Infrastructure & Materials
+        'Metals & Mining': 'NIFTYMETAL',
+        'Metals': 'NIFTYMETAL',
+        
+        # Energy & Oil
+        'Energy': 'NIFTYOILGAS',
+        'Oil Gas & Consumable Fuels': 'NIFTYOILGAS',
+        'Oil & Gas': 'NIFTYOILGAS',
+        
+        # Media & Telecom
+        'Media': 'NIFTYMEDIA',
+        'Telecom': 'NIFTYIT',  # Telecom often grouped with IT in NSE indices
+        
+        # Realty & Construction
+        'Realty': 'NIFTYREALTY',
+        
+        # Chemicals
+        'Chemicals': 'NIFTYCHEMICALS',
+        
+        # Note: The following sectors don't have dedicated NSE indices
+        # but are fully supported via CSV sector mapping:
+        # - Construction Materials (includes Cement companies)
+        # - Capital Goods
+        # - Construction
+        # - Textiles
+        # - Services
+        # - Consumer Services
+        # - Consumer Goods
+        # - Power
+        # - Petrochemicals
+        # - Forest Materials
+        # - Fertilizers
+        # - Biotechnology
+        # - Auto Ancillary
+        # - Agri
+        # - Diversified
+        # - Utilities
     }
 
 

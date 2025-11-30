@@ -261,7 +261,7 @@ def list_available_tools() -> str:
    └─ Find worst performing stocks by return %
 
 4️⃣ **get_sector_top_performers(sector, start_date, end_date, top_n)** 🆕
-   └─ Get top stocks from specific sector (Banking, IT, Auto, Pharma, FMCG, etc.)
+   └─ Get top stocks from specific sector (31 sectors supported including Cement, Textiles, Power, etc.)
 
 5️⃣ **analyze_stock(symbol, start_date, end_date)**
    └─ Deep-dive analysis of individual stock with comprehensive metrics
@@ -302,9 +302,14 @@ def list_available_tools() -> str:
 1️⃣5️⃣ **google_search(query)** [News Agent]
    └─ Search financial news to correlate with price movements
 
-**AVAILABLE SECTORS FOR FILTERING:**
-🏦 Banking, 💻 IT, 🚗 Auto, 💊 Pharma, 🛒 FMCG,
-⚡ Energy, 🏭 Metals, 📱 Telecom, 💰 Financial Services
+**AVAILABLE SECTORS FOR FILTERING (31 Total):**
+🏦 Banking, 💻 IT, 🚗 Automobile, 🔧 Auto Ancillary, 💊 Pharma, 🏥 Healthcare,
+🧬 Biotechnology, 🛒 FMCG, 📡 Consumer Durables, 🏪 Consumer Services,
+🏭 Construction Materials (Cement), ⚙️ Capital Goods, 🏗️ Construction,
+🔩 Metals & Mining, ⚡ Power, 🛢️ Oil Gas & Consumable Fuels, ⚗️ Petrochemicals,
+🧪 Chemicals, 🌾 Fertilizers, 📺 Media, 📱 Telecom, 🏠 Realty,
+💼 Services, 🧵 Textiles, 🌳 Forest Materials, 🌽 Agri, 💧 Utilities,
+💰 Financial Services, 🛍️ Consumer Goods, 🏛️ Diversified, 🔋 Energy
 
 **ADVANCED METRICS AVAILABLE:**
 📊 Max Drawdown, Sharpe Ratio, Win Rate

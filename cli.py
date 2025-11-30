@@ -72,6 +72,15 @@ def _get_api_key() -> str | None:
 
 def _initialize_data() -> None:
     """Load NSE data and log basic context."""
+    # Display ASCII art logo
+    logo_path = os.path.join(os.path.dirname(__file__), "cli-logo.ini")
+    try:
+        with open(logo_path, "r", encoding="utf-8") as f:
+            logo = f.read()
+            console.print(f"[bold green]{logo}[/bold green]")
+    except FileNotFoundError:
+        logger.warning("Logo file not found: %s", logo_path)
+    
     console.print("\n[bold cyan]🚀 Initializing Investor Paradise...[/bold cyan]")
     logger.info("Initializing Investor Paradise CLI")
 

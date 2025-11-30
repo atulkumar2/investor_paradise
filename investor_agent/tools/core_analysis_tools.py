@@ -216,8 +216,14 @@ def get_sector_top_performers(
     Get top performing stocks from a specific sector.
 
     Args:
-        sector: Sector name (e.g., 'Banking', 'IT', 'Auto', 'Pharma', 'FMCG',
-                'Energy', 'Metals', 'Telecom', 'Financial Services')
+        sector: Sector name. Supported sectors (31 total):
+                Banking, IT, Automobile, Auto Ancillary, Pharma, Healthcare, 
+                Biotechnology, FMCG, Consumer Durables, Consumer Services, 
+                Construction Materials, Capital Goods, Construction, 
+                Metals & Mining, Power, Oil Gas & Consumable Fuels, 
+                Petrochemicals, Chemicals, Fertilizers, Media, Telecom, 
+                Realty, Services, Textiles, Forest Materials, Agri, 
+                Utilities, Financial Services, Consumer Goods, Diversified, Energy
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
         top_n: Number of top stocks to return (default 5)
@@ -225,8 +231,10 @@ def get_sector_top_performers(
     Returns:
         Dictionary with sector performers, period info, and summary statistics
 
-    Available sectors: Banking, IT, Auto, Pharma, FMCG, Energy, Metals,
-                      Telecom, Financial Services
+    Examples:
+        >>> get_sector_top_performers("Banking", "2025-10-01", "2025-11-01", 5)
+        >>> get_sector_top_performers("Construction Materials", None, None, 10)
+        >>> get_sector_top_performers("IT", "2025-10-01", "2025-11-01", 5)
     """
     # Get stocks in this sector
     sector_stocks = get_sector_stocks(sector)
