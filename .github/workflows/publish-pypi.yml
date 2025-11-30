@@ -1,9 +1,6 @@
 name: Publish to TestPyPI
 
-on:
-  push:
-    branches:
-      - main
+on:f
   workflow_dispatch:
 
 jobs:
@@ -33,12 +30,12 @@ jobs:
       run: |
         twine check dist/*
     
-    - name: Publish to TestPyPI
+    - name: Publish to PyPI
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
+        TWINE_PASSWORD: "pypi-your-pypi-token-here"
       run: |
-        twine upload --repository testpypi dist/* --verbose
+        twine upload --repository pypi dist/* --verbose
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4

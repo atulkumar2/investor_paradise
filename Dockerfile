@@ -35,7 +35,11 @@ RUN uv sync --frozen || uv sync
 # Remove build dependencies to reduce image size
 RUN apt-get purge -y --auto-remove gcc git && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* \
+           *.egg-info \
+           .eggs \
+           build \
+           dist
 
 # Create data directories
 RUN mkdir -p ./investor_agent/data/cache \

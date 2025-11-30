@@ -19,6 +19,12 @@ from investor_agent.logger import get_logger
 logger = get_logger(__name__)
 console = Console()
 
+def _get_default_cache_dir() -> Path:
+    """Get the default cache directory path."""
+    investor_agent_dir = Path(__file__).parent / "investor_agent"  # Assuming current working directory
+    return investor_agent_dir / "data" / "cache"
+
+
 # GitHub release URLs for cache files
 CACHE_FILES = {
     "combined_data.parquet": "https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/combined_data.parquet",
@@ -38,7 +44,7 @@ def check_cache_exists(cache_dir: Optional[Path] = None) -> bool:
         True if all cache files exist, False otherwise
     """
     if cache_dir is None:
-        cache_dir = Path("investor_agent/data/cache")
+        cache_dir = _get_default_cache_dir()
 
     if not cache_dir.exists():
         return False
@@ -106,7 +112,7 @@ def download_cache_files(
         True if all downloads successful, False otherwise
     """
     if cache_dir is None:
-        cache_dir = Path("investor_agent/data/cache")
+        cache_dir = _get_default_cache_dir()
 
     # Create cache directory if it doesn't exist
     cache_dir.mkdir(parents=True, exist_ok=True)

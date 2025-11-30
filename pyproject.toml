@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "investor-paradise-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI-powered NSE stock analysis agent with interactive CLI and web interface"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
-    {name = "Investor Paradise Team", email = "contact@example.com"}
+    {name = "Investor Paradise Team", email = "divyadarsheedas@gmail.com"}
 ]
 keywords = ["stocks", "nse", "analysis", "ai", "gemini", "trading", "investment"]
 dependencies = [
@@ -30,8 +30,9 @@ dependencies = [
     "keyring>=24.0.0",
 ]
 
+
 [project.scripts]
-investor-paradise-cli = "cli:main"
+investor-paradise-cli = "cli:cli_main"
 
 [project.urls]
 Homepage = "https://github.com/atulkumar2/investor_paradise"
@@ -40,7 +41,7 @@ Issues = "https://github.com/atulkumar2/investor_paradise/issues"
 
 [tool.setuptools]
 packages = ["investor_agent", "investor_agent.prompts", "investor_agent.tools"]
-py-modules = ["cli", "cli_helpers", "spinner", "download_nse_data"]
+py-modules = ["cli", "cli_helpers", "spinner", "download_nse_data", "cache_manager"]
 
 [tool.ruff]
 line-length = 100

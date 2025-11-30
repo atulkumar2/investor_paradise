@@ -38,13 +38,13 @@ The information, analysis, recommendations, and trading strategies provided by *
 - [Why Use This?](#why-use-this)
 - [Key Features](#key-features)
 - [Agent Architecture](#agent-architecture)
-- [Two Ways to Use](#two-ways-to-use)
+- [Ways to Use the Agent](#ways-to-use-the-agent)
 - [Prerequisites](#prerequisites)
 - [Setup Instructions](#setup-instructions)
   - [1. Clone Repository](#1-clone-the-repository)
   - [2. Install Dependencies](#2-install-dependencies-with-uv)
   - [3. Configure API Key](#3-configure-api-key)
-  - [4. Download NSE Data](#4-download-nse-historical-data)
+  - [4. Data Setup](#4-data-setup-automatic)
 - [Running the Agent](#running-the-agent)
   - [Option 1: Web UI (ADK Web)](#option-1-web-ui-adk-web)
   - [Option 2: Command Line (CLI)](#option-2-command-line-cli)
@@ -67,7 +67,13 @@ The information, analysis, recommendations, and trading strategies provided by *
 - **Real-time Streaming**: Progressive response display for faster feedback
 - **Performance**: Parquet caching system with automatic GitHub downloads for instant startup
 
-Unlike traditional stock screeners (static filters) or generic chatbots (hallucinated data), this system uses **five specialized agents** working in parallel/sequence to deliver research-grade analysis in seconds.
+Unlike traditional stock screeners (static filters) or generic chatbots (hallucinated data), this system uses **five specialized agents** working in parallel/sequence to deliver research-grade analysis in seconds:
+
+1. **Entry Router** - Security & intent classification
+2. **Market Analyst** - Quantitative analysis with 25 tools
+3. **PDF News Scout** - Historical news from local database
+4. **Web News Researcher** - Real-time news from web search
+5. **CIO Synthesizer** - Investment strategy synthesis
 
 ---
 
@@ -99,6 +105,33 @@ Beautifully formatted terminal output with:
 - **Responsive layouts** that adapt to terminal width
 - **Live updates** showing which tools are executing in real-time
 
+### 🔐 Secure API Key Management (Keyring)
+
+Smart multi-tier API key storage with automatic fallback:
+
+- **System keyring integration**: Securely stores API key in OS credential manager (macOS Keychain, Windows Credential Locker, Linux Secret Service)
+- **Automatic fallback**: Uses encrypted config file if keyring unavailable
+- **Priority hierarchy**: Environment variable > Keyring > Config file > User prompt
+- **One-time setup**: Enter API key once, securely saved for future sessions
+- **Easy reset**: `--reset-api-key` flag to update stored credentials
+
+```bash
+# First run: Prompts for API key and saves to keyring
+uv run cli.py
+# ⚠️  Google API Key not configured
+# Get your free API key from: https://aistudio.google.com/apikey
+# Enter your Google API Key: ********
+# ✅ API key securely saved to system keyring
+
+# Subsequent runs: Uses stored key automatically
+uv run cli.py
+# (No prompt - loads from keyring)
+
+# Reset stored key
+uv run cli.py --reset-api-key
+# ✅ API key removed from keyring
+```
+
 ### 💾 Intelligent Memory Management (Event Compaction)
 
 - **Automatic context optimization** compresses conversation history to stay within token limits
@@ -120,9 +153,9 @@ Built-in usage monitoring for transparency:
 💡 Queries this session: 2
 ```
 
-- **Per-model breakdown** shows cost attribution across agent pipeline
-- **Session totals** track cumulative usage
-- **Real-time updates** after each query
+- **Per-model breakdown**: Cost attribution across the 5-agent pipeline
+- **Session totals**: Cumulative usage tracking
+- **Real-time updates**: Live cost display after each query
 
 ### 🗄️ Session Management (Database-Backed)
 
@@ -144,7 +177,7 @@ exit    # Save and exit (history preserved)
 ### 💾 Performance Optimizations & Caching
 
 #### Parquet Caching System
-- **13x faster data loading**: 5s → 0.4s for 1M+ rows
+- **Faster data loading**: Optimized with Parquet format for 1M+ rows
 - **Automatic cache generation**: Downloads from GitHub releases on first run
 - **4 cache files**:
   - `combined_data.parquet` (49MB): Stock price data
@@ -156,7 +189,7 @@ exit    # Save and exit (history preserved)
 
 #### Runtime Optimizations
 - **Lazy loading**: Models instantiated only when needed
-- **Parallel news agents**: PDF + web search run concurrently (25% faster)
+- **Parallel news agents**: PDF + web search run concurrently
 - **Streaming responses**: Progressive output display for better UX (CLI)
 
 ```bash
@@ -167,6 +200,7 @@ uv run cli.py
 
 # Refresh cache (optional, downloads latest data)
 uv run cli.py --refresh-cache
+```
 
 ---
 
@@ -210,26 +244,41 @@ Runs **two agents simultaneously** for comprehensive coverage:
 - **Coverage**: Real-time web (Economic Times, MoneyControl, Mint)
 - **Correlation**: Links news events to price movements (✅ Confirmation / ⚠️ Divergence)
 
-### 🎯 4. CIO Synthesizer (Investment Strategist)
+### 🎯 5. CIO Synthesizer (Investment Strategist)
 
 - **Role**: Merge quantitative + dual news sources into final recommendations
-- **Model**: Gemini Pro (advanced reasoning for synthesis)
+- **Model**: Gemini Flash (optimized for synthesis and reasoning)
 - **Output**: Investment-grade report with risk assessment, combining PDF insights + web news
 
 ---
 
-## Two Ways to Use
+## Ways to Use the Agent
+
+You can access Investor Paradise on multiple platforms:
+
+### 🖥️ Local Development
 
 | Method | Use Case | Features |
 |--------|----------|----------|
-| **ADK Web UI** | Interactive analysis, exploration | Visual chat interface, session history, web-based |
-| **CLI** | Quick queries, automation, scripting | Rich-formatted output, session management, token tracking, terminal-based |
+| **CLI (Terminal)** | Quick queries, automation, scripting | Rich-formatted output, session management, token tracking |
+| **ADK Web (Terminal)** | Interactive analysis, exploration | Visual chat interface, session history, browser-based |
+| **Docker (CLI)** | Containerized CLI access | Isolated environment, reproducible setup |
+| **Docker (Web)** | Containerized web interface | Isolated environment, port-mapped access |
 
-Both use the same agent pipeline, data, and session management—choose based on your workflow.
+### ☁️ GitHub Codespaces
 
-**CLI Advantages**: Beautiful terminal output with Rich library, database-backed session persistence, real-time token/cost tracking, session switching, faster startup.
+| Method | Use Case | Features |
+|--------|----------|----------|
+| **CLI (Codespaces Terminal)** | Cloud-based CLI access | No local setup, run from browser |
+| **ADK Web (Codespaces Terminal)** | Cloud-based web interface | No local setup, browser access |
+| **Docker CLI (Codespaces)** | Containerized CLI in cloud | Full isolation in cloud environment |
+| **Docker Web (Codespaces)** | Containerized web in cloud | Port forwarding via Codespaces |
 
-**Web UI Advantages**: Browser-based access, easier for non-technical users, built-in session browser, remote access capability.
+All methods use the same agent pipeline, data, and session management—choose based on your workflow and infrastructure.
+
+**Repositories**:
+- **Main Codebase**: [https://github.com/atulkumar2/investor_paradise](https://github.com/atulkumar2/investor_paradise)
+- **NSE Data**: [https://github.com/atulkumar2/investor_agent_data](https://github.com/atulkumar2/investor_agent_data)
 
 ---
 
@@ -238,7 +287,7 @@ Both use the same agent pipeline, data, and session management—choose based on
 - **Python 3.11+** (required for modern typing features)
 - **uv** package manager ([Install uv](https://github.com/astral-sh/uv))
 - **Google API Key** with Gemini access ([Get API key](https://ai.google.dev/))
-- **NSE historical data** (CSV files in `investor_agent/data/NSE_RawData/`)
+- **Internet connection** (for first-time cache download from GitHub)
 
 ---
 
@@ -265,97 +314,83 @@ This installs:
 
 ### 3. Configure API Key
 
-Create a `.env` file in the project root:
+**Option A: Automatic Setup (Recommended)**
+
+The CLI will prompt for your API key on first run and securely save it:
 
 ```bash
-# .env
-GOOGLE_API_KEY=your_gemini_api_key_here
+# Just run the CLI - it will guide you through setup
+uv run cli.py
+
+# You'll be prompted:
+# ⚠️  Google API Key not configured
+# Get your free API key from: https://aistudio.google.com/apikey
+# Enter your Google API Key: [your key here]
+# ✅ API key securely saved to system keyring
 ```
 
-**Important**: Never commit `.env` to version control (already in `.gitignore`).
+**Your API key is stored securely:**
+- **macOS**: Keychain Access
+- **Windows**: Windows Credential Locker
+- **Linux**: Secret Service (gnome-keyring/KWallet)
+- **Fallback**: Encrypted file at `~/.investor-paradise/config.env`
 
-### 4. Download NSE Historical Data
+**Option B: Environment Variable (Temporary Override)**
 
-The project includes an automated NSE data downloader script. You have two options:
-
-#### **Option A: Automated Download (Recommended)**
-
-Use the included script to automatically download NSE Bhavcopy data:
+For temporary use or CI/CD environments:
 
 ```bash
-# Download data from Oct 1, 2019 to today
-python download_nse_data.py
+# Create .env file in project root
+echo "GOOGLE_API_KEY=your_gemini_api_key_here" > .env
 
-# The script will:
-# ✅ Download Full Bhavcopy zip files from NSE
-# ✅ Extract CSV files automatically
-# ✅ Organize files by month (YYYYMM folders)
-# ✅ Skip weekends (market closed)
-# ✅ Track failed downloads in failed_downloads.json
+# Or set directly in terminal
+export GOOGLE_API_KEY=your_gemini_api_key_here
+uv run cli.py
 ```
 
-**What the script does:**
-
-- Downloads NSE Full Bhavcopy data from NSE India's official API
-- Handles session cookies and headers automatically (avoids 403 errors)
-- Skips already downloaded files (resume-friendly)
-- Organizes files in monthly folders: `investor_agent/data/NSE_RawData/YYYYMM/`
-- Respects NSE servers with rate limiting (2-second delays)
-
-**Expected output:**
+**Managing Your API Key:**
 
 ```bash
-🚀 Starting NSE Bhavcopy Download
-📅 Date Range: 01-Feb-2025 to 22-Nov-2025
-📁 Output Directory: /path/to/investor_agent/data/NSE_RawData
+# Reset stored key (prompts for new one)
+uv run cli.py --reset-api-key
 
-🔐 Getting session cookie... ✅
-
-📥 Processing 03-Feb-2025... ✅
-📥 Processing 04-Feb-2025... ✅
-⏭️  Skipping 08-Feb-2025 (Weekend)
-📥 Processing 10-Feb-2025... ⏭️  Already exists, skipping
-...
-
-📊 Download Summary
-✅ Successful: 195
-⏭️  Skipped (already exist): 12
-❌ Failed: 3
+# View help
+uv run cli.py --help
 ```
 
-**Customize date range** (edit `download_nse_data.py`):
+**Important**: Never commit API keys to version control. The `.env` file is already in `.gitignore`.
 
-```python
-# Change these lines in main()
-start_date = datetime(2020, 5, 1)  # Start from May 1, 2020
-end_date = datetime.now()           # Download up to today
-```
+### 4. Data Setup (Automatic)
 
-#### **Option B: Manual Download**
-
-If you have existing NSE data or prefer manual download:
-
-1. Place CSV files in `investor_agent/data/NSE_RawData/`:
+**No manual downloads needed!** The system automatically downloads pre-processed cache files from GitHub on first run.
 
 ```bash
-investor_agent/
-  data/
-    NSE_RawData/
-      sec_bhavdata_full_01052020.csv
-      sec_bhavdata_full_04052020.csv
-      sec_bhavdata_full_05052020.csv
-      ...
+# First run downloads cache files automatically (~50MB total)
+uv run cli.py
+
+# Output:
+# 📦 Checking cache files...
+# ⚠️  Cache files not found. Downloading from GitHub...
+# 📦 Downloading NSE data cache files...
+# 📥 Downloading combined_data.parquet... [Progress bar]
+# 📥 Downloading nse_indices_cache.parquet... [Progress bar]
+# 📥 Downloading nse_sector_cache.parquet... [Progress bar]
+# 📥 Downloading nse_symbol_company_mapping.parquet... [Progress bar]
+# ✅ All cache files downloaded successfully!
 ```
 
-2. **File naming convention**: `sec_bhavdata_full_DDMMYYYY.csv`
+**What gets downloaded:**
+- **combined_data.parquet** (49MB): Historical stock price data (2019-2025)
+- **nse_indices_cache.parquet** (44KB): Index constituents (NIFTY 50, BANK, IT, etc.)
+- **nse_sector_cache.parquet** (22KB): Sector mappings (2,050+ stocks, 31 sectors)
+- **nse_symbol_company_mapping.parquet** (89KB): Symbol→Company name lookup
 
-3. **Minimum data requirement**: At least 30 days of data recommended for meaningful analysis
+**Cache location**: `investor_agent/data/cache/`
 
-**Data Performance:**
-
-- **First run**: Data loads from CSV (~5 seconds for 1M+ rows)  
-- **Subsequent runs**: Uses Parquet cache (~0.4 seconds, 13x faster)
-- **Cache location**: `investor_agent/data/cache/combined_data.parquet`
+**To refresh data** (downloads latest from GitHub):
+```bash
+uv run cli.py --refresh-cache
+```
 
 ---
 
@@ -392,6 +427,10 @@ adk web . --host 0.0.0.0        # Allow external access
 
 **Best for**: Quick queries, automation, scripting, CI/CD pipelines
 
+The CLI delivers professional-grade output with color-coded insights, formatted tables, and rendered Markdown—making complex analysis instantly readable in your terminal.
+
+![CLI Startup](cli-entry.png)
+
 ```bash
 # Interactive mode (session management enabled)
 uv run cli.py
@@ -423,7 +462,7 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 
 **How it works**:
 
-1. Agent loads data (uses Parquet cache if available - 13x faster)
+1. Agent loads data from Parquet cache (downloaded from GitHub on first run)
 2. Processes query through 5-agent pipeline with event compaction
 3. Displays beautifully formatted report with Rich library
 4. Tracks tokens/cost and saves session to SQLite database
@@ -435,28 +474,42 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 
 ## Troubleshooting
 
-### Data Download Issues
+### Cache Download Issues
 
-**Problem**: Script fails with 403 errors  
-**Solution**: NSE's API may have rate limits. Wait 5 minutes and retry. The script will skip already downloaded files.
+**Problem**: Cache files fail to download from GitHub releases  
+**Solution**: 
+- Check your internet connection
+- Verify GitHub is accessible from your network
+- If behind a corporate firewall, you may need to configure proxy settings
+- Try manually downloading cache files from [investor_agent_data releases](https://github.com/atulkumar2/investor_agent_data/releases)
 
-**Problem**: "No data available (404)" for specific dates  
-**Solution**: NSE may not have published data for that date (market holidays, system maintenance). Check `failed_downloads.json` for details.
+**Problem**: "Cache files not found" error  
+**Solution**: 
+- Run `uv run cli.py --refresh-cache` to force re-download
+- Ensure you have write permissions to `investor_agent/data/cache/` directory
+- Check if cache files exist in `investor_agent/data/cache/` (should see 4 `.parquet` files)
 
-**Problem**: Script is too slow  
-**Solution**: The script uses 2-second delays to respect NSE servers. For faster downloads, you can reduce the delay in `download_nse_data.py` (line with `time.sleep(2)`), but use responsibly.
+**Problem**: Slow first-time startup  
+**Solution**: First run downloads ~50MB of cache files from GitHub. This is a one-time process. Subsequent runs will be instant.
 
 ### Data Loading Issues
 
 **Problem**: "No data loaded" when starting agent  
 **Solution**:
 
-1. Verify CSV files exist in `investor_agent/data/NSE_RawData/`
-2. Check file naming: `sec_bhavdata_full_DDMMYYYY.csv`
-3. Delete Parquet cache and reload: `rm -rf investor_agent/data/cache/`
+1. Check if cache files exist in `investor_agent/data/cache/`
+2. Try refreshing cache: `uv run cli.py --refresh-cache`
+3. Verify all 4 cache files are present:
+   - `combined_data.parquet`
+   - `nse_indices_cache.parquet`
+   - `nse_sector_cache.parquet`
+   - `nse_symbol_company_mapping.parquet`
 
 **Problem**: Agent queries return "No data available for [dates]"  
-**Solution**: Download more historical data. The agent can only analyze dates present in your CSV files.
+**Solution**: The cache contains data from the [investor_agent_data repository](https://github.com/atulkumar2/investor_agent_data). If you need different date ranges, check the data repository for updates or contribute new data.
+
+**Problem**: Outdated stock data  
+**Solution**: Run `uv run cli.py --refresh-cache` to download the latest cache from GitHub releases. Data is updated periodically in the [investor_agent_data repository](https://github.com/atulkumar2/investor_agent_data).
 
 ---
 
@@ -556,14 +609,13 @@ investor_paradise/
 │   │   ├── web_news_prompt.py
 │   │   └── merger_prompt.py
 │   └── data/
-│       ├── NSE_RawData/     # CSV files (git-ignored)
-│       │   ├── 202505/      # May 2025 data (organized by month)
-│       │   ├── 202506/      # June 2025 data
-│       │   └── ...
+│       ├── cache/           # Parquet cache (auto-downloaded from GitHub)
+│       │   ├── combined_data.parquet
+│       │   ├── nse_indices_cache.parquet
+│       │   ├── nse_sector_cache.parquet
+│       │   └── nse_symbol_company_mapping.parquet
+│       ├── investor_agent_sessions.db  # Session history database
 │       ├── NSE_indices_list/  # Index constituents (NIFTY 50, BANK, IT, etc.)
-│       ├── sector_mapping.csv # Sector-to-symbol CSV (replaces hardcoded map)
-│       ├── cache/           # Parquet cache (auto-generated)
-│       │   └── combined_data.parquet
 │       └── vector-data/     # ChromaDB collections for PDF news (optional)
 │           ├── 202407/      # July 2024 news PDFs
 │           ├── 202408/      # August 2024 news PDFs
@@ -680,46 +732,17 @@ grep "Token Usage" cli.log | tail -10
 docker build -t investor-paradise:latest .
 ```
 
-**2. Run with Docker Compose (Recommended):**
 
-```bash
-# Create .env file with your API key
-echo "GOOGLE_API_KEY=your_api_key_here" > .env
-
-# Start the agent in web mode
-docker-compose up
-
-# Access at http://localhost:8000
-```
 
 **3. Run with Docker CLI:**
 
 ```bash
 # Web mode (ADK web server)
-docker run -d \
-  -e GOOGLE_API_KEY=your_api_key \
-  -v $(pwd)/investor_agent/data/NSE_RawData:/app/investor_agent/data/NSE_RawData:ro \
-  -v $(pwd)/investor_agent/data/cache:/app/investor_agent/data/cache \
-  -v $(pwd)/investor_agent/data/sessions.db:/app/investor_agent/data/sessions.db \
-  -p 8000:8000 \
-  --name investor-paradise \
-  investor-paradise:latest
+docker run --rm -e GOOGLE_API_KEY="your_api_key" -p 8000:8000 investor-paradise
 
 # CLI mode (interactive terminal)
-docker run -it \
-  -e GOOGLE_API_KEY=your_api_key \
-  -v $(pwd)/investor_agent/data/NSE_RawData:/app/investor_agent/data/NSE_RawData:ro \
-  -v $(pwd)/investor_agent/data/cache:/app/investor_agent/data/cache \
-  investor-paradise:latest cli
+docker run --rm -it -e GOOGLE_API_KEY="your_api_key" investor-paradise cli
 ```
-
-### Volume Mounts Explained
-
-| Volume | Purpose | Mode |
-|--------|---------|------|
-| `NSE_RawData/` | CSV data files (1.5GB+) | Read-only (`:ro`) |
-| `cache/` | Parquet cache for fast loading | Read-write |
-| `sessions.db` | Chat history persistence | Read-write |
 
 ### Environment Variables
 
@@ -728,12 +751,7 @@ docker run -it \
 | `GOOGLE_API_KEY` | ✅ Yes | - | Your Google AI API key |
 | `SESSION_CLEANUP_DAYS` | ❌ No | 7 | Delete sessions older than N days |
 
-### Docker Compose Features
 
-- **Auto-restart**: Container restarts on failure
-- **Health checks**: Monitors agent availability every 30s
-- **Resource limits**: Optional CPU/memory constraints
-- **Log rotation**: Prevents disk space issues (10MB max, 3 files)
 
 ### Container Logs
 
@@ -751,10 +769,7 @@ docker inspect investor-paradise-agent | grep -A 5 Health
 ### Stopping the Agent
 
 ```bash
-# Stop with Docker Compose
-docker-compose down
-
-# Stop individual container
+# Stop container (if running with -d flag)
 docker stop investor-paradise
 docker rm investor-paradise
 ```
@@ -767,8 +782,8 @@ For production environments:
 
    ```yaml
    volumes:
-     - nse-data:/app/investor_agent/data/NSE_RawData
      - cache-data:/app/investor_agent/data/cache
+     - session-data:/app/investor_agent/data
    ```
 
 2. **Enable resource limits** in `docker-compose.yml`:
@@ -821,7 +836,7 @@ dependencies = [
 If external platforms require `requirements.txt`:
 
 ```bash
-uv export > requirements.txt
+uv pip compile pyproject.toml -o requirements.txt
 ```
 
 ---
@@ -850,68 +865,33 @@ This project is licensed under the MIT License—see LICENSE file for details.
 - **NSE India** for market data
 - **Gemini AI** for language models
 
----
 
-## Gemini (Google Generative AI) Integration
-
-Optional planner uses Gemini if `google-generativeai` is installed and
-`GOOGLE_API_KEY` is set. Install and configure (supports `.env` at project root):
-
-```bash
-uv add google-generativeai
-echo 'GOOGLE_API_KEY=your-key-here' > .env  # or export in shell profile
-```
-
-Run a question (Gemini will attempt JSON planning, else fallback):
-
-```bash
-uv run -- python main.py "Summarize TCS between 2024-01-01 and 2024-06-30"
-```
-
-If Gemini returns a plan, raw tool results may be emitted as JSON unless a
-single `summarize_symbol` is called (rendered nicely). Adjust synthesis logic
-in `main.py` if you need richer formatting.
-
-## Agentic Sessions (multi‑turn + persistence)
-
-Interactive, multi‑turn chat with optional session persistence and context compaction lives in `agentic.py`.
-
-Start an in‑memory session:
-
-```bash
-uv run -- python agentic.py --data ./data
-```
-
-Persist sessions in SQLite and enable periodic compaction (every 3 agent turns):
-
-```bash
-uv run -- python agentic.py \
-  --data ./data \
-  --db my_agent_data.db \
-  --app-name default --user-id default --session-id demo \
-  --compact 3
-```
-
-During the chat, try simple stateful interactions:
-
-```text
-My name is Sam. I'm from Poland.
-What is my name? Which country am I from?
-```
-
-Notes:
-
-- `--db` stores events and session state; omit for in‑memory.
-- `--compact N` appends a summary event every N agent turns.
-- Gemini planning in `agentic.py` is optional and falls back to heuristics.
-
-## Typing Modernization
 
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/atulkumar2/investor_paradise/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/atulkumar2/investor_paradise/discussions)
 - **Documentation**: See `AGENT_FLOW_DIAGRAM.md` for detailed architecture
+
+---
+
+## Contributors
+
+Built by passionate developers dedicated to democratizing stock market analysis:
+
+### 👥 Core Team
+
+**Atul Kumar**
+- GitHub: [@atulkumar2](https://github.com/atulkumar2)
+- LinkedIn: [atulkumar88](https://www.linkedin.com/in/atulkumar88)
+
+**Divyadarshee Das**
+- GitHub: [@Divyadarshee](https://github.com/Divyadarshee)
+- LinkedIn: [divyadarshee-das](https://www.linkedin.com/in/divyadarshee-das/)
+
+**Sujeet Velapure**
+- GitHub: [@sujeet-ssv](https://github.com/sujeet-ssv)
+- LinkedIn: [sujeetvelapure](https://www.linkedin.com/in/sujeetvelapure/)
 
 ---
 
