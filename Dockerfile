@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gcc \
     git \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
@@ -49,15 +50,36 @@ RUN mkdir -p ./investor_agent/data/cache \
 
 # Download NSE parquet caches
 RUN echo "📦 Downloading NSE data caches..." && \
-    curl -L https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/combined_data.parquet \
+    curl -fL https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/combined_data.parquet \
     -o ./investor_agent/data/cache/combined_data.parquet && \
-    curl -L https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_indices_cache.parquet \
+    curl -fL https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_indices_cache.parquet \
     -o ./investor_agent/data/cache/nse_indices_cache.parquet && \
-    curl -L https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_sector_cache.parquet \
+    curl -fL https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_sector_cache.parquet \
     -o ./investor_agent/data/cache/nse_sector_cache.parquet && \
-    curl -L https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_symbol_company_mapping.parquet \
+    curl -fL https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_symbol_company_mapping.parquet \
     -o ./investor_agent/data/cache/nse_symbol_company_mapping.parquet && \
     echo "✅ All caches downloaded"
+
+# Download News store
+RUN echo "📦 Downloading all News store archives..." && \
+    for MONTH in 202511 202510 202509; do \
+        echo "➡️  Processing $MONTH" && \
+        curl -fL https://github.com/atulkumar2/investoragentdata_news1/releases/download/newsdata_202511/$MONTH.zip \
+            -o ./investor_agent/data/vector-data/$MONTH.zip && \
+        unzip -o ./investor_agent/data/vector-data/$MONTH.zip -d ./investor_agent/data/vector-data/ && \
+        rm ./investor_agent/data/vector-data/$MONTH.zip; \
+    done && \
+    echo "🎉 News store archives processed successfully for 202509, 202510, 202511"
+
+RUN echo "📦 Downloading all News store archives..." && \
+    for MONTH in 202506 202507 202508; do \
+        echo "➡️  Processing $MONTH" && \
+        curl -fL https://github.com/atulkumar2/investoragentdata_news1/releases/download/newsdata_202506_202508/$MONTH.zip \
+            -o ./investor_agent/data/vector-data/$MONTH.zip && \
+        unzip -o ./investor_agent/data/vector-data/$MONTH.zip -d ./investor_agent/data/vector-data/ && \
+        rm ./investor_agent/data/vector-data/$MONTH.zip; \
+    done && \
+    echo "🎉 News store archives processed successfully for 202506, 202507, 202508"
 
 # Expose web port
 EXPOSE 8000
