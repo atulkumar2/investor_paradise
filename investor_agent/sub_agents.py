@@ -170,11 +170,13 @@ def create_entry_router_root(
 
     # Entry Router with analysis pipeline as sub-agent (not tool)
     # This allows visibility into individual agents and their tool calls
+    # Also has check_data_availability tool for quick metadata queries
     entry_router = LlmAgent(
         name="EntryRouter",
         model=entry_model,
         instruction=ENTRY_ROUTER_PROMPT,
-        sub_agents=[analysis_pipeline]  # Direct sub-agent for visibility
+        sub_agents=[analysis_pipeline],  # Direct sub-agent for visibility
+        tools=[tools.check_data_availability]  # Quick data range check
     )
     logger.info("EntryRouter created with AnalysisPipeline as sub-agent")
 
