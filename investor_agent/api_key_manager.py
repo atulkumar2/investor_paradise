@@ -108,7 +108,7 @@ def _prompt_for_api_key() -> str:
     console.print("[cyan]Get your free API key from: https://aistudio.google.com/apikey[/cyan]")
     console.print("[dim]Your key will be securely stored for future use[/dim]\n")
 
-    api_key = console.print("[bold cyan]Enter your Google API Key:[/bold cyan] ", end="")
+    console.print("[bold cyan]Enter your Google API Key:[/bold cyan] ", end="")
     api_key = getpass("").strip()
     # api_key = console.input("[bold cyan]Enter your Google API Key:[/bold cyan] ").strip()
 
@@ -203,6 +203,7 @@ def show_help() -> None:
     console.print("[bold]Usage:[/bold]")
     console.print("  investor-paradise-cli                 Start the interactive CLI")
     console.print("  investor-paradise-cli --reset-api-key Reset your Google API key")
+    console.print("  investor-paradise-cli --refresh-cache Re-download NSE data cache files")
     console.print("  investor-paradise-cli --help          Show this help message")
     console.print("\n[bold]Commands (in CLI):[/bold]")
     console.print("  exit, quit, bye    Exit the CLI")
@@ -212,6 +213,7 @@ def show_help() -> None:
     console.print("  GOOGLE_API_KEY     Your Google Gemini API key (overrides stored key)")
     console.print("\n[bold]Examples:[/bold]")
     console.print("  investor-paradise-cli")
+    console.print("  investor-paradise-cli --refresh-cache")
     console.print("  GOOGLE_API_KEY=your_key investor-paradise-cli")
     console.print("\n[bold]Get API Key:[/bold]")
     console.print("  https://aistudio.google.com/apikey")

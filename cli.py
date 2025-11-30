@@ -8,6 +8,7 @@ import asyncio
 import os
 import sys
 import traceback
+from typing import Tuple
 
 from dotenv import load_dotenv
 from google.adk.apps.app import App, EventsCompactionConfig
@@ -18,6 +19,7 @@ from google.genai import types
 from rich.markdown import Markdown
 from rich.panel import Panel
 
+from cache_manager import ensure_cache_available, refresh_cache
 from cli_helpers import (
     AgentProgressTracker,
     TokenTracker,
@@ -47,6 +49,17 @@ def _handle_cli_args() -> bool:
 
     if "--help" in sys.argv or "-h" in sys.argv:
         show_help()
+        return True
+
+    if "--refresh-cache" in sys.argv:
+        console.print("\n[bold cyan]🔄 Refreshing NSE data cache...[/bold cyan]")
+        logger.info("User requested cache refresh")
+        if refresh_cache():
+            console.print("[bold green]✅ Cache refreshed successfully![/bold green]")
+            console.print("[dim]You can now run the CLI normally.[/dim]\n")
+        else:
+            console.print("[bold red]❌ Cache refresh failed![/bold red]")
+            console.print("[yellow]Please check your internet connection and try again.[/yellow]\n")
         return True
 
     return False
@@ -80,9 +93,18 @@ def _initialize_data() -> None:
             console.print(f"[bold green]{logo}[/bold green]")
     except FileNotFoundError:
         logger.warning("Logo file not found: %s", logo_path)
-    
+
     console.print("\n[bold cyan]🚀 Initializing Investor Paradise...[/bold cyan]")
     logger.info("Initializing Investor Paradise CLI")
+
+    # Ensure cache files are available (download if missing)
+    console.print("\n[bold blue]📦 Checking cache files...[/bold blue]")
+    logger.info("Checking cache availability")
+    if not ensure_cache_available():
+        console.print("[bold red]❌ Failed to download cache files![/bold red]")
+        console.print("[yellow]Please check your internet connection and try again.[/yellow]")
+        logger.error("Cache download failed")
+        sys.exit(1)
 
     with console.status(
         "[bold blue]📂 Loading NSE stock data...[/bold blue]", spinner="dots"
@@ -131,7 +153,7 @@ def _create_models(api_key: str) -> tuple[Gemini, Gemini, Gemini]:
     return lite_model, flash_model, pro_model
 
 
-def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> App:
+def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> Tuple[App, Runner]:
     """Create the ADK App and root agent pipeline."""
     logger.info("Creating agent pipeline")
     root_agent = create_pipeline(
@@ -143,7 +165,7 @@ def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> A
     root_agent.__module__ = "cli"
 
     logger.info("Creating App with EventsCompactionConfig")
-    return App(
+    app = App(
         name="investor_agent",
         root_agent=root_agent,
         events_compaction_config=EventsCompactionConfig(
@@ -151,11 +173,12 @@ def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> A
             overlap_size=1,
         ),
     )
+    return app, root_agent
 
 
 def _create_runner(app: App) -> tuple[Runner, DatabaseSessionService]:
     """Create the DatabaseSessionService and Runner."""
-    db_url = "sqlite+aiosqlite:///investor_agent/data/sessions.db"
+    db_url = "sqlite+aiosqlite:///investor_agent/data/investor_agent_sessions.db"
     logger.info("Setting up session service with database: %s", db_url)
     session_service = DatabaseSessionService(db_url=db_url)
     runner = Runner(app=app, session_service=session_service)
@@ -185,7 +208,7 @@ async def main() -> None:
     _initialize_data()
 
     lite_model, flash_model, pro_model = _create_models(google_api_key)
-    app = _create_app(lite_model, flash_model, pro_model)
+    app, root_agent = _create_app(lite_model, flash_model, pro_model)
     runner, session_service = _create_runner(app)
 
     user_id = get_or_create_user_id()

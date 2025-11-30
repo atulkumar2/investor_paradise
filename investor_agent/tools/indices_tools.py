@@ -33,8 +33,10 @@ def _should_use_sector_cache() -> bool:
         return False
 
     sector_file = Path(__file__).parent.parent / "sector_mapping.csv"
+
+    # If CSV source doesn't exist, use cache (distributed cache scenario)
     if not sector_file.exists():
-        return False
+        return True
 
     cache_mtime = os.path.getmtime(_SECTOR_CACHE_FILE)
     csv_mtime = os.path.getmtime(sector_file)
@@ -47,16 +49,35 @@ def _should_use_sector_cache() -> bool:
 
 
 def _save_sector_cache(sector_map: dict[str, str]) -> None:
-    """Save sector mapping to parquet cache."""
+    """Save sector mapping to parquet cache with validation."""
     if not sector_map:
+        logger.warning("Cannot save empty sector map to cache")
         return
 
     _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     try:
+        # Create DataFrame and normalize data
         df = pd.DataFrame(list(sector_map.items()), columns=['SYMBOL', 'SECTOR'])
+
+        # Strip whitespace from both columns
+        df['SYMBOL'] = df['SYMBOL'].str.strip()
+        df['SECTOR'] = df['SECTOR'].str.strip()
+
+        # Remove any empty entries
+        df = df[df['SYMBOL'].str.len() > 0]
+        df = df[df['SECTOR'].str.len() > 0]
+
+        # Sort for consistency
+        df = df.sort_values('SYMBOL').reset_index(drop=True)
+
+        # Save to parquet
         df.to_parquet(_SECTOR_CACHE_FILE, index=False)
-        logger.info("💾 Saved sector cache to %s", _SECTOR_CACHE_FILE)
+
+        logger.info(
+            "💾 Saved sector cache: %d entries to %s",
+            len(df), _SECTOR_CACHE_FILE
+        )
     except Exception as e:
         logger.error("Failed to save sector cache: %s", e)
 
@@ -79,19 +100,24 @@ def _load_sector_map() -> dict[str, str]:
             logger.info("✅ Loaded %d sector mappings from cache", len(_SECTOR_MAP))
             return _SECTOR_MAP
         except Exception as e:
-            logger.warning("Failed to load sector cache: %s, loading from CSV", e)
+            logger.warning("Failed to load sector cache: %s", e)
 
-    # Load from CSV
+    # Load from CSV (only if cache doesn't exist or is invalid)
     sector_file = Path(__file__).parent.parent / "sector_mapping.csv"
+    if not sector_file.exists():
+        logger.error(
+            "Neither sector cache nor CSV file exists. "
+            "Cache: %s, CSV: %s",
+            _SECTOR_CACHE_FILE, sector_file
+        )
+        _SECTOR_MAP = {}
+        return _SECTOR_MAP
+
     try:
         logger.info("📂 Loading sector mapping from CSV...")
         df = pd.read_csv(sector_file)
         _SECTOR_MAP = dict(zip(df['SYMBOL'], df['SECTOR']))
         logger.info("✅ Loaded %d sector mappings from CSV", len(_SECTOR_MAP))
-
-        # Save to cache for next time
-        _save_sector_cache(_SECTOR_MAP)
-
         return _SECTOR_MAP
     except (FileNotFoundError, pd.errors.EmptyDataError,
             pd.errors.ParserError, PermissionError):
@@ -107,18 +133,26 @@ def _should_use_indices_cache() -> bool:
         return False
 
     indices_dir = Path(__file__).parent.parent / "data" / "NSE_indices_list"
+
+    # If CSV source directory doesn't exist, use cache (distributed cache scenario)
     if not indices_dir.exists():
-        return False
+        return True
 
     cache_mtime = os.path.getmtime(_INDICES_CACHE_FILE)
 
     # Check all CSV files in latest date folder
     date_folders = sorted([d for d in indices_dir.iterdir() if d.is_dir()], reverse=True)
     if not date_folders:
-        return False
+        # No CSV folders, use cache
+        return True
 
     latest_folder = date_folders[0]
-    for csv_file in latest_folder.glob("*.csv"):
+    csv_files = list(latest_folder.glob("*.csv"))
+    if not csv_files:
+        # No CSV files, use cache
+        return True
+
+    for csv_file in csv_files:
         if os.path.getmtime(csv_file) > cache_mtime:
             logger.info("Indices cache stale: %s is newer", csv_file.name)
             return False
@@ -283,7 +317,7 @@ def list_available_indices() -> dict[str, int]:
 def get_sectoral_indices() -> dict[str, str]:
     """
     Get mapping of sectors to their NSE sectoral index names.
-    
+
     Note: Only sectors with dedicated NSE indices are mapped here.
     Other sectors (like Construction Materials, Textiles, etc.) are supported
     through CSV-based sector_mapping and will work with get_sector_stocks().
@@ -301,41 +335,41 @@ def get_sectoral_indices() -> dict[str, str]:
         'Financial Services': 'NIFTYFINANCE',
         'Private Banks': 'NIFTYPRIVATEBANK',
         'PSU Banks': 'NIFTYPSUBANK',
-        
+
         # Technology
         'IT': 'NIFTYIT',
-        
+
         # Auto & Manufacturing
         'Automobile': 'NIFTYAUTO',
         'Auto': 'NIFTYAUTO',
-        
+
         # Pharma & Healthcare
         'Pharma': 'NIFTYPHARMA',
         'Healthcare': 'NIFTYHEALTHCARE',
-        
+
         # Consumer
         'FMCG': 'NIFTYFMCG',
         'Consumer Durables': 'NIFTYCONSUMERDURABLES',
-        
+
         # Infrastructure & Materials
         'Metals & Mining': 'NIFTYMETAL',
         'Metals': 'NIFTYMETAL',
-        
+
         # Energy & Oil
         'Energy': 'NIFTYOILGAS',
         'Oil Gas & Consumable Fuels': 'NIFTYOILGAS',
         'Oil & Gas': 'NIFTYOILGAS',
-        
+
         # Media & Telecom
         'Media': 'NIFTYMEDIA',
         'Telecom': 'NIFTYIT',  # Telecom often grouped with IT in NSE indices
-        
+
         # Realty & Construction
         'Realty': 'NIFTYREALTY',
-        
+
         # Chemicals
         'Chemicals': 'NIFTYCHEMICALS',
-        
+
         # Note: The following sectors don't have dedicated NSE indices
         # but are fully supported via CSV sector mapping:
         # - Construction Materials (includes Cement companies)
@@ -484,12 +518,68 @@ def get_market_cap_category(symbol: str) -> str | None:
 def get_sector_stocks(sector: str) -> list[str]:
     """
     Get list of stock symbols belonging to a sector (using CSV mapping).
+    Case-insensitive sector matching.
 
     Args:
-        sector: Sector name (e.g., 'Banking', 'IT', 'Auto')
+        sector: Sector name (e.g., 'Banking', 'IT', 'Auto', 'FMCG')
 
     Returns:
         List of stock symbols in the sector
     """
     sector_map = _load_sector_map()
-    return [sym for sym, sec in sector_map.items() if sec == sector]
+
+    # Case-insensitive matching
+    sector_lower = sector.lower()
+
+    # First try exact match (case-insensitive)
+    for sym, sec in sector_map.items():
+        if sec.lower() == sector_lower:
+            # Found exact match, now get all stocks with this sector (using original case from map)
+            target_sector = sec
+            return [s for s, sect in sector_map.items() if sect == target_sector]
+
+    # No match found
+    return []
+
+
+def get_stocks_by_sector_and_cap(sector: str, market_cap: str) -> list[str]:
+    """
+    Get list of stock symbols filtered by both sector AND market cap.
+
+    Args:
+        sector: Sector name (e.g., 'Banking', 'IT', 'Automobile', 'Pharma')
+        market_cap: Market cap category - "LARGE", "MID", or "SMALL"
+
+    Returns:
+        List of stock symbols matching both criteria
+
+    Example:
+        >>> get_stocks_by_sector_and_cap('Automobile', 'LARGE')
+        ['MARUTI', 'TATAMOTORS', 'M&M', ...]
+    """
+    # Get all stocks in the sector
+    sector_stocks = get_sector_stocks(sector)
+
+    # Get market cap classification
+    cap_map = _build_market_cap_map()
+    cap_upper = market_cap.upper()
+
+    if cap_upper not in ['LARGE', 'MID', 'SMALL']:
+        logger.warning(
+            "Invalid market cap '%s'. Use LARGE, MID, or SMALL",
+            market_cap
+        )
+        return []
+
+    # Filter sector stocks by market cap
+    filtered = [
+        symbol for symbol in sector_stocks
+        if cap_map.get(symbol) == cap_upper
+    ]
+
+    logger.info(
+        "Found %d %s cap stocks in %s sector (out of %d total in sector)",
+        len(filtered), cap_upper, sector, len(sector_stocks)
+    )
+
+    return filtered

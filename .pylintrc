@@ -1,10 +1,11 @@
 [MASTER]
 ignore = .venv,venv
+ignored-modules=google,google.adk
 
 [MESSAGES CONTROL]
 # Disable indentation-related checks to avoid conflicts with formatter
 disable =
-	bad-indentation
+	bad-indentation, broad-exception-caught
 
 [FORMAT]
 max-line-length = 100
