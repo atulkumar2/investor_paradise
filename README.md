@@ -41,18 +41,25 @@ The information, analysis, recommendations, and trading strategies provided by *
 - [Ways to Use the Agent](#ways-to-use-the-agent)
 - [Prerequisites](#prerequisites)
 - [Setup Instructions](#setup-instructions)
-  - [1. Clone Repository](#1-clone-the-repository)
-  - [2. Install Dependencies](#2-install-dependencies-with-uv)
+  - [1. Clone the Repository](#1-clone-the-repository)
+  - [2. Install Dependencies with `uv`](#2-install-dependencies-with-uv)
   - [3. Configure API Key](#3-configure-api-key)
-  - [4. Data Setup](#4-data-setup-automatic)
+  - [4. Data Setup (Automatic)](#4-data-setup-automatic)
 - [Running the Agent](#running-the-agent)
   - [Option 1: Web UI (ADK Web)](#option-1-web-ui-adk-web)
   - [Option 2: Command Line (CLI)](#option-2-command-line-cli)
-  - [Option 3: Docker Deployment](#-docker-deployment)
-- [Sample Questions](#sample-questions)
 - [Troubleshooting](#troubleshooting)
+- [Sample Questions](#sample-questions)
 - [Project Structure](#project-structure)
 - [Advanced Configuration](#advanced-configuration)
+- [🐳 Docker Deployment](#-docker-deployment)
+- [Linting & Formatting](#linting--formatting)
+- [Dependencies](#dependencies)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+- [Support](#support)
+- [Contributors](#contributors)
 
 ---
 
@@ -177,6 +184,7 @@ exit    # Save and exit (history preserved)
 ### 💾 Performance Optimizations & Caching
 
 #### Parquet Caching System
+
 - **Faster data loading**: Optimized with Parquet format for 1M+ rows
 - **Automatic cache generation**: Downloads from GitHub releases on first run
 - **4 cache files**:
@@ -188,6 +196,7 @@ exit    # Save and exit (history preserved)
 - **Offline-ready**: Cache files work without CSV source data
 
 #### Runtime Optimizations
+
 - **Lazy loading**: Models instantiated only when needed
 - **Parallel news agents**: PDF + web search run concurrently
 - **Streaming responses**: Progressive output display for better UX (CLI)
@@ -277,6 +286,7 @@ You can access Investor Paradise on multiple platforms:
 All methods use the same agent pipeline, data, and session management—choose based on your workflow and infrastructure.
 
 **Repositories**:
+
 - **Main Codebase**: [https://github.com/atulkumar2/investor_paradise](https://github.com/atulkumar2/investor_paradise)
 - **NSE Data**: [https://github.com/atulkumar2/investor_agent_data](https://github.com/atulkumar2/investor_agent_data)
 
@@ -288,6 +298,7 @@ All methods use the same agent pipeline, data, and session management—choose b
 - **uv** package manager ([Install uv](https://github.com/astral-sh/uv))
 - **Google API Key** with Gemini access ([Get API key](https://ai.google.dev/))
 - **Internet connection** (for first-time cache download from GitHub)
+- **Docker Desktop or Docker engine** (for building docker images)
 
 ---
 
@@ -314,7 +325,7 @@ This installs:
 
 ### 3. Configure API Key
 
-**Option A: Automatic Setup (Recommended)**
+#### **Option A: Automatic Setup (Recommended)**
 
 The CLI will prompt for your API key on first run and securely save it:
 
@@ -330,12 +341,13 @@ uv run cli.py
 ```
 
 **Your API key is stored securely:**
+
 - **macOS**: Keychain Access
 - **Windows**: Windows Credential Locker
 - **Linux**: Secret Service (gnome-keyring/KWallet)
 - **Fallback**: Encrypted file at `~/.investor-paradise/config.env`
 
-**Option B: Environment Variable (Temporary Override)**
+#### **Option B: Environment Variable (Temporary Override)**
 
 For temporary use or CI/CD environments:
 
@@ -380,6 +392,7 @@ uv run cli.py
 ```
 
 **What gets downloaded:**
+
 - **combined_data.parquet** (49MB): Historical stock price data (2019-2025)
 - **nse_indices_cache.parquet** (44KB): Index constituents (NIFTY 50, BANK, IT, etc.)
 - **nse_sector_cache.parquet** (22KB): Sector mappings (2,050+ stocks, 31 sectors)
@@ -477,7 +490,8 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 ### Cache Download Issues
 
 **Problem**: Cache files fail to download from GitHub releases  
-**Solution**: 
+**Solution**:
+
 - Check your internet connection
 - Verify GitHub is accessible from your network
 - If behind a corporate firewall, you may need to configure proxy settings
@@ -485,6 +499,7 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 
 **Problem**: "Cache files not found" error  
 **Solution**: 
+
 - Run `uv run cli.py --refresh-cache` to force re-download
 - Ensure you have write permissions to `investor_agent/data/cache/` directory
 - Check if cache files exist in `investor_agent/data/cache/` (should see 4 `.parquet` files)
@@ -823,11 +838,20 @@ Runtime dependencies declared in `pyproject.toml` (PEP 621):
 ```toml
 [project]
 dependencies = [
-    "pandas>=2.0",
-    "pyarrow>=14.0",
-    "google-adk>=0.1",
-    "pydantic>=2.0",
-    "python-dotenv>=1.0"
+    "google-adk @ git+https://github.com/google/adk-python/",
+    "google-genai",
+    "pandas",
+    "python-dotenv",
+    "fastparquet",
+    "certifi",
+    "rich>=14.2.0",
+    "aiosqlite>=0.21.0",
+    "chromadb>=0.4.24",
+    "sentence-transformers>=2.6.1",
+    "PyPDF2>=3.0.1",
+    "python-dateutil>=2.8.2",
+    "httpx",
+    "keyring>=24.0.0",
 ]
 ```
 
@@ -865,8 +889,6 @@ This project is licensed under the MIT License—see LICENSE file for details.
 - **NSE India** for market data
 - **Gemini AI** for language models
 
-
-
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/atulkumar2/investor_paradise/issues)
@@ -881,18 +903,24 @@ Built by passionate developers dedicated to democratizing stock market analysis:
 
 ### 👥 Core Team
 
-**Atul Kumar**
-- GitHub: [@atulkumar2](https://github.com/atulkumar2)
-- LinkedIn: [atulkumar88](https://www.linkedin.com/in/atulkumar88)
+#### **Atul Kumar**
 
-**Divyadarshee Das**
-- GitHub: [@Divyadarshee](https://github.com/Divyadarshee)
-- LinkedIn: [divyadarshee-das](https://www.linkedin.com/in/divyadarshee-das/)
+[![GitHub](https://img.shields.io/badge/GitHub-@atulkumar2-181717?logo=github&logoColor=white&style=for-the-badge)](https://github.com/atulkumar2)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-atulkumar88-0A66C2?logo=linkedin&logoColor=white&style=for-the-badge)](https://www.linkedin.com/in/atulkumar88)
+[![Kaggle](https://img.shields.io/badge/Kaggle-atulkumar1-20BEFF?logo=kaggle&logoColor=white&style=for-the-badge)](https://www.kaggle.com/atulkumar1)
 
-**Sujeet Velapure**
-- GitHub: [@sujeet-ssv](https://github.com/sujeet-ssv)
-- LinkedIn: [sujeetvelapure](https://www.linkedin.com/in/sujeetvelapure/)
+#### **Divyadarshee Das**
+
+[![GitHub](https://img.shields.io/badge/GitHub-@Divyadarshee-181717?logo=github&logoColor=white&style=for-the-badge)](https://github.com/Divyadarshee)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-divyadarshee--das-0A66C2?logo=linkedin&logoColor=white&style=for-the-badge)](https://www.linkedin.com/in/divyadarshee-das/)
+[![Kaggle](https://img.shields.io/badge/Kaggle-divyadarsheedas-20BEFF?logo=kaggle&logoColor=white&style=for-the-badge)](https://www.kaggle.com/divyadarsheedas)
+
+#### **Sujeet Velapure**
+
+[![GitHub](https://img.shields.io/badge/GitHub-@sujeet--ssv-181717?logo=github&logoColor=white&style=for-the-badge)](https://github.com/sujeet-ssv)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-sujeetvelapure-0A66C2?logo=linkedin&logoColor=white&style=for-the-badge)](https://www.linkedin.com/in/sujeetvelapure/)
+[![Kaggle](https://img.shields.io/badge/Kaggle-sujeetvelapure-20BEFF?logo=kaggle&logoColor=white&style=for-the-badge)](https://www.kaggle.com/sujeetvelapure)
 
 ---
 
-**Made with ❤️ for the Indian stock market research community**
+### **Made with ❤️ for the Indian stock market research community**
