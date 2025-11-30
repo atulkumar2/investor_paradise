@@ -106,3 +106,5 @@ logger.info("   Compaction: interval=3 invocations, overlap_size=1 turn")
 # The ADK web command will look for 'app' and 'runner'
 # Usage: adk web (auto-discovers apps in current directory)
 # Note: App name MUST match the directory name (investor_agent) for session persistence to work
+
+agent = root_agent

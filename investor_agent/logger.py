@@ -17,7 +17,7 @@ for log_file in ["web.log", "tunnel.log"]:
 if not logging.getLogger().handlers:
     logging.basicConfig(
         filename=_LOG_FILE,
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s %(name)s:%(lineno)s %(levelname)s:%(message)s",
     )
 

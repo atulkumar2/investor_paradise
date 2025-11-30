@@ -85,14 +85,19 @@ def _get_api_key() -> str | None:
 
 def _initialize_data() -> None:
     """Load NSE data and log basic context."""
-    # Display ASCII art logo
-    logo_path = os.path.join(os.path.dirname(__file__), "cli-logo.ini")
-    try:
-        with open(logo_path, "r", encoding="utf-8") as f:
-            logo = f.read()
-            console.print(f"[bold green]{logo}[/bold green]")
-    except FileNotFoundError:
-        logger.warning("Logo file not found: %s", logo_path)
+    # Display ASCII art logo (embedded directly to avoid packaging issues)
+    logo = """
+ _____                    _              ______                   _ _
+│_   _│                  │ │             │ ___ ╲                 │ (_)
+  │ │ _ ____   _____  ___│ │_ ___  _ __  │ │_╱ ╱_ _ _ __ __ _  __│ │_ ___  ___
+  │ ││ '_ ╲ ╲ ╱ ╱ _ ╲╱ __│ __╱ _ ╲│ '__│ │  __╱ _` │ '__╱ _` │╱ _` │ ╱ __│╱ _ ╲
+ _│ ││ │ │ ╲ V ╱  __╱╲__ ╲ ││ (_) │ │    │ │ │ (_│ │ │ │ (_│ │ (_│ │ ╲__ ╲  __╱
+ ╲___╱_│ │_│╲_╱ ╲___││___╱╲__╲___╱│_│    ╲_│  ╲__,_│_│  ╲__,_│╲__,_│_│___╱╲___│
+
+                    Your AI-Powered NSE Stock Market Intelligence Platform 📊
+                        Data-Driven Insights • News Intelligence • Smart Analysis
+"""
+    console.print(f"[bold green]{logo}[/bold green]")
 
     console.print("\n[bold cyan]🚀 Initializing Investor Paradise...[/bold cyan]")
     logger.info("Initializing Investor Paradise CLI")
@@ -417,5 +422,9 @@ async def main() -> None:
             logger.error("Error processing query", exc_info=True)
             traceback.print_exc()
 
-if __name__ == "__main__":
+def cli_main():
+    """Entry point wrapper for the CLI console script."""
     asyncio.run(main())
+
+if __name__ == "__main__":
+    cli_main()
