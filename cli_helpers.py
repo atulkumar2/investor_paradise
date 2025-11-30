@@ -43,7 +43,7 @@ TOOL_STATUS = {
     "get_sectoral_indices": ("🏭 Getting sectoral indices", "cyan"),
     "get_sector_from_index": ("🔍 Identifying sector from index", "cyan"),
     "get_stocks_by_sector_index": ("📊 Analyzing index performance", "blue"),
-    "get_stocks_by_market_cap": ("💰 Filtering by market cap", "blue"),
+    "get_stocks_by_market_cap": ("💰 Filtering by market cap", "cyan"),
     "get_market_cap_category": ("🏷️ Classifying market cap", "cyan"),
     "get_sector_stocks": ("🏢 Getting sector stocks", "cyan"),
 

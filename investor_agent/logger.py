@@ -8,7 +8,7 @@ import sys
 _LOG_FILE = "investor_agent.log"
 
 # Clean up any previous logs
-for log_file in [_LOG_FILE, "web.log", "tunnel.log"]:
+for log_file in ["web.log", "tunnel.log"]:
     if os.path.exists(log_file):
         os.remove(log_file)
         print(f"🧹 Cleaned up {log_file}")

@@ -68,6 +68,7 @@ def create_analysis_pipeline(
             tools.get_sector_from_index,
             tools.get_stocks_by_sector_index,
             tools.get_stocks_by_market_cap,
+            tools.get_stocks_by_sector_and_cap,
             tools.get_market_cap_category,
             tools.get_sector_stocks,
             # Advanced Pattern Detection Tools
@@ -170,13 +171,22 @@ def create_entry_router_root(
 
     # Entry Router with analysis pipeline as sub-agent (not tool)
     # This allows visibility into individual agents and their tool calls
-    # Also has check_data_availability tool for quick metadata queries
+    # Also has quick-response tools for simple queries (no analysis needed)
     entry_router = LlmAgent(
         name="EntryRouter",
         model=entry_model,
         instruction=ENTRY_ROUTER_PROMPT,
         sub_agents=[analysis_pipeline],  # Direct sub-agent for visibility
-        tools=[tools.check_data_availability]  # Quick data range check
+        tools=[
+            # Quick metadata/data retrieval tools (direct response, no transfer)
+            tools.check_data_availability,       # Data range info
+            tools.get_index_constituents,        # "What stocks are in NIFTY 50?"
+            tools.list_available_indices,        # "What indices do you have?"
+            tools.get_sector_stocks,             # "List all Banking sector stocks"
+            tools.get_stocks_by_market_cap,      # "Show me all large cap stocks"
+            tools.get_stocks_by_sector_and_cap,  # "Large cap automobile stocks"
+            tools.get_sectoral_indices,          # "What sectoral indices are available?"
+        ]
     )
     logger.info("EntryRouter created with AnalysisPipeline as sub-agent")
 
@@ -212,4 +222,3 @@ def create_pipeline(
 
     return create_entry_router_root(entry_model, market_model,
                                     news_model, merger_model)
-  

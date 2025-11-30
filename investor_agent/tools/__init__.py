@@ -27,6 +27,7 @@ from investor_agent.tools.indices_tools import (
     get_sector_stocks,
     get_sectoral_indices,
     get_stocks_by_market_cap,
+    get_stocks_by_sector_and_cap,
     get_stocks_by_sector_index,
     list_available_indices,
 )
@@ -47,6 +48,7 @@ __all__ = [
     'get_sector_from_index',
     'get_stocks_by_sector_index',
     'get_stocks_by_market_cap',
+    'get_stocks_by_sector_and_cap',
     'get_market_cap_category',
     'get_sector_stocks',
     # Core analysis tools

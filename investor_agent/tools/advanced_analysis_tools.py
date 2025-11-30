@@ -341,7 +341,7 @@ def get_52week_high_low(symbols: Optional[list[str]] = None, top_n: int = 20) ->
         top_n: Number of stocks to return (default 20)
 
     Returns:
-        Dictionary with stocks trading near 52-week highs (breakout candidates) 
+        Dictionary with stocks trading near 52-week highs (breakout candidates)
         or lows (reversal plays)
 
     When specific symbols are provided: Returns 52-week data for ALL requested symbols

@@ -60,11 +60,12 @@ The information, analysis, recommendations, and trading strategies provided by *
 
 **Investor Paradise** is a multi-agent AI system that analyzes NSE (National Stock Exchange) stock data by combining:
 
-- **Quantitative Analysis**: 24 specialized tools for calculating returns, detecting patterns, analyzing risk metrics, index-based screening, and market cap filtering
+- **Quantitative Analysis**: 25 specialized tools for calculating returns, detecting patterns, analyzing risk metrics, index-based screening, market cap filtering, and sector+cap combinations
 - **Qualitative Research**: Dual-source news correlation (in-house PDF database + real-time web search) to explain *why* stocks moved
 - **Security**: Built-in prompt injection defense to protect against malicious queries
 - **Synthesis**: Professional investment recommendations combining data + news + risk assessment
 - **Real-time Streaming**: Progressive response display for faster feedback
+- **Performance**: Parquet caching system with automatic GitHub downloads for instant startup
 
 Unlike traditional stock screeners (static filters) or generic chatbots (hallucinated data), this system uses **five specialized agents** working in parallel/sequence to deliver research-grade analysis in seconds.
 
@@ -140,12 +141,32 @@ clear   # Clear current session history
 exit    # Save and exit (history preserved)
 ```
 
-### ⚡ Performance Optimizations
+### 💾 Performance Optimizations & Caching
 
-- **Parquet caching**: 13x faster data loading (5s → 0.4s for 1M+ rows)
+#### Parquet Caching System
+- **13x faster data loading**: 5s → 0.4s for 1M+ rows
+- **Automatic cache generation**: Downloads from GitHub releases on first run
+- **4 cache files**:
+  - `combined_data.parquet` (49MB): Stock price data
+  - `nse_indices_cache.parquet` (44KB): Index constituents (NIFTY50, NIFTYBANK, etc.)
+  - `nse_sector_cache.parquet` (22KB): Sector mappings (2,050+ stocks, 31 sectors)
+  - `nse_symbol_company_mapping.parquet` (89KB): Symbol→Company name lookup
+- **Cache refresh**: Use `--refresh-cache` flag to download latest data from GitHub
+- **Offline-ready**: Cache files work without CSV source data
+
+#### Runtime Optimizations
 - **Lazy loading**: Models instantiated only when needed
-- **Parallel news agents**: PDF + web search run concurrently
+- **Parallel news agents**: PDF + web search run concurrently (25% faster)
 - **Streaming responses**: Progressive output display for better UX (CLI)
+
+```bash
+# First run: Downloads cache from GitHub (~50MB total)
+uv run cli.py
+# ⬇️  Downloading cache files from GitHub releases...
+# ✅ All 4 cache files ready
+
+# Refresh cache (optional, downloads latest data)
+uv run cli.py --refresh-cache
 
 ---
 
@@ -163,11 +184,11 @@ The system uses a **5-agent pipeline** with parallel news gathering:
 
 ### 📊 2. Market Analyst (Quantitative Engine)
 
-- **Role**: Execute 24 analysis tools across 4 categories
+- **Role**: Execute 25 analysis tools across 4 categories
 - **Model**: Gemini Flash (optimized for tool-heavy workflows)
 - **Tool Categories**:
   - **Core Analysis** (6 tools): Market-wide scans, stock fundamentals, comparisons
-  - **Index & Market Cap** (8 tools): NIFTY 50/BANK/IT screening, large/mid/small cap filtering
+  - **Index & Market Cap** (9 tools): NIFTY 50/BANK/IT screening, large/mid/small cap filtering, **sector+cap combinations**
   - **Advanced Patterns** (9 tools): Volume surge, breakouts, momentum, reversals, divergences
   - **Utility** (1 tool): Data availability checks
 
@@ -475,15 +496,20 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 "Stocks with bearish volume-price divergence"
 ```
 
-### 📊 Index & Market Cap Queries (NEW)
+### 📊 Index & Market Cap Queries
 
 ```bash
+"What stocks are in NIFTY 50?"
 "List all available indices"
 "What are the sectoral indices?"
 "Top performers from NIFTY IT in the last month"
 "Compare large cap vs mid cap performance"
 "Which NIFTY BANK stocks are underperforming?"
 "Show me small cap stocks with high delivery"
+"Large cap automobile stocks"              # NEW: Sector + Cap filter
+"Mid cap IT companies"                     # NEW: Sector + Cap filter
+"Get me small cap pharma stocks"           # NEW: Sector + Cap filter
+"Analyze large cap banking stocks"         # NEW: Sector + Cap analysis
 ```
 
 ### 🛡️ Security Testing
@@ -543,7 +569,7 @@ investor_paradise/
 │           ├── 202408/      # August 2024 news PDFs
 │           └── ...
 ├── cli.py                   # CLI entry point
-├── cli_helpers.py           # CLI utilities, spinner tool status (31 tools)
+├── cli_helpers.py           # CLI utilities, spinner tool status (25 tools)
 ├── spinner.py               # Animated progress with streaming support
 ├── download_nse_data.py     # NSE data downloader script
 ├── pyproject.toml           # Dependencies + config
@@ -567,9 +593,10 @@ NSESTORE = NSEDataStore(root_path="path/to/custom/data")
 
 Tools are now organized in `investor_agent/tools/` for better maintainability:
 
-- **indices_tools.py** (8 tools): Index constituents, market cap classification
-  - `get_index_constituents()`, `list_available_indices()`, `get_stocks_by_market_cap()`, etc.
-- **core_analysis_tools.py** (8 tools): Market scans, stock analysis, comparisons
+- **indices_tools.py** (9 tools): Index constituents, market cap classification, **sector+cap filtering**
+  - `get_index_constituents()`, `list_available_indices()`, `get_stocks_by_market_cap()`
+  - `get_stocks_by_sector_and_cap()` ⭐ **NEW**: Filter by both sector AND market cap
+- **core_analysis_tools.py** (6 tools): Market scans, stock analysis, comparisons
   - `get_top_gainers()`, `analyze_stock()`, `compare_stocks()`, etc.
 - **advanced_analysis_tools.py** (9 tools): Pattern detection, risk metrics
   - `detect_breakouts()`, `find_momentum_stocks()`, `analyze_risk_metrics()`, etc.
@@ -579,7 +606,7 @@ Tools are now organized in `investor_agent/tools/` for better maintainability:
 Import all tools via:
 
 ```python
-from investor_agent.tools import get_top_gainers, analyze_stock, ...
+from investor_agent.tools import get_top_gainers, analyze_stock, get_stocks_by_sector_and_cap, ...
 ```
 
 ### Sector Mapping

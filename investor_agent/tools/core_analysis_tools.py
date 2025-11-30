@@ -13,7 +13,7 @@ from typing import Optional
 
 from investor_agent.data_engine import NSESTORE, MetricsEngine
 from investor_agent.logger import get_logger
-from investor_agent.tools.indices_tools import _SECTOR_MAP, get_sector_stocks
+from investor_agent.tools.indices_tools import get_sector_stocks
 
 logger = get_logger(__name__)
 
@@ -217,12 +217,12 @@ def get_sector_top_performers(
 
     Args:
         sector: Sector name. Supported sectors (31 total):
-                Banking, IT, Automobile, Auto Ancillary, Pharma, Healthcare, 
-                Biotechnology, FMCG, Consumer Durables, Consumer Services, 
-                Construction Materials, Capital Goods, Construction, 
-                Metals & Mining, Power, Oil Gas & Consumable Fuels, 
-                Petrochemicals, Chemicals, Fertilizers, Media, Telecom, 
-                Realty, Services, Textiles, Forest Materials, Agri, 
+                Banking, IT, Automobile, Auto Ancillary, Pharma, Healthcare,
+                Biotechnology, FMCG, Consumer Durables, Consumer Services,
+                Construction Materials, Capital Goods, Construction,
+                Metals & Mining, Power, Oil Gas & Consumable Fuels,
+                Petrochemicals, Chemicals, Fertilizers, Media, Telecom,
+                Realty, Services, Textiles, Forest Materials, Agri,
                 Utilities, Financial Services, Consumer Goods, Diversified, Energy
         start_date: Start date in YYYY-MM-DD format (optional)
         end_date: End date in YYYY-MM-DD format (optional)
@@ -236,14 +236,19 @@ def get_sector_top_performers(
         >>> get_sector_top_performers("Construction Materials", None, None, 10)
         >>> get_sector_top_performers("IT", "2025-10-01", "2025-11-01", 5)
     """
-    # Get stocks in this sector
+    # Load sector map and get stocks in this sector
+    from investor_agent.tools.indices_tools import _load_sector_map
+    sector_map = _load_sector_map()
     sector_stocks = get_sector_stocks(sector)
 
     if not sector_stocks:
-        available_sectors = sorted(set(_SECTOR_MAP.values()))
+        if sector_map:
+            available_sectors = sorted(set(sector_map.values()))
+        else:
+            available_sectors = []
         return {
             "tool": "get_sector_top_performers",
-            "error": f"Sector '{sector}' not found. Available: {', '.join(available_sectors)}"
+            "error": f"Sector '{sector}' not found. Available: {', '.join(available_sectors) if available_sectors else 'Sector data not loaded'}"
         }
 
     _ = NSESTORE.df
@@ -260,7 +265,6 @@ def get_sector_top_performers(
             return {"tool": "get_sector_top_performers", "error": "No data available"}
 
     # Analyze each stock in the sector
-
     results = []
     for symbol in sector_stocks:
         stock_df = NSESTORE.get_stock_data(symbol, s_date, e_date)
@@ -268,6 +272,14 @@ def get_sector_top_performers(
             stats = MetricsEngine.calculate_period_stats(stock_df)
             if stats:
                 stats['symbol'] = symbol
+                # Verify stock actually belongs to this sector (defensive check)
+                actual_sector = sector_map.get(symbol, "Unknown")
+                if actual_sector != sector:
+                    logger.warning(
+                        f"Stock {symbol} returned for sector {sector} but actually in {actual_sector}. "
+                        f"This indicates sector cache corruption. Skipping this stock."
+                    )
+                    continue
                 results.append(stats)
 
     if not results:

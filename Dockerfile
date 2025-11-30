@@ -51,6 +51,8 @@ RUN echo "📦 Downloading NSE data caches..." && \
     -o ./investor_agent/data/cache/nse_indices_cache.parquet && \
     curl -L https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_sector_cache.parquet \
     -o ./investor_agent/data/cache/nse_sector_cache.parquet && \
+    curl -L https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_symbol_company_mapping.parquet \
+    -o ./investor_agent/data/cache/nse_symbol_company_mapping.parquet && \
     echo "✅ All caches downloaded"
 
 # Expose web port

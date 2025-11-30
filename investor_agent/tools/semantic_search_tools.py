@@ -60,35 +60,65 @@ def get_company_name(symbol: str) -> dict:
 
     # Load mapping on first call (lazy initialization)
     if _SYMBOL_NAME_MAP is None:
+        cache_path = Path(__file__).parent.parent / "data" / "cache" / "nse_symbol_company_mapping.parquet"
         csv_path = Path(__file__).parent.parent / "nse_symbol_company_mapping.csv"
 
-        if not csv_path.exists():
-            logger.warning("NSE symbol-company mapping not found at %s", csv_path)
-            return {
-                "symbol": symbol,
-                "company_name": symbol,  # Fallback to symbol
-                "found": False,
-                "error": "nse_symbol_company_mapping.csv not found"
-            }
+        # Try loading from parquet cache first
+        if cache_path.exists():
+            try:
+                logger.info("📦 Loading symbol-company mapping from cache...")
+                df = pd.read_parquet(cache_path)
 
-        try:
-            # Read CSV and create symbol->name mapping
-            df = pd.read_csv(csv_path)
-            # Strip whitespace from column names and values
-            df.columns = df.columns.str.strip()
-            _SYMBOL_NAME_MAP = dict(zip(
-                df['SYMBOL'].str.strip().str.upper(),
-                df['NAME OF COMPANY'].str.strip()
-            ))
-            logger.info("Loaded %d symbol-to-name mappings from NSE", len(_SYMBOL_NAME_MAP))
-        except Exception as e:
-            logger.error("Failed to load NSE symbol-company mapping: %s", e)
-            return {
-                "symbol": symbol,
-                "company_name": symbol,
-                "found": False,
-                "error": str(e)
-            }
+                # Handle different column name variations
+                name_col = None
+                for col in ['COMPANY_NAME', 'NAME OF COMPANY', 'NAME']:
+                    if col in df.columns:
+                        name_col = col
+                        break
+
+                if name_col:
+                    _SYMBOL_NAME_MAP = dict(zip(
+                        df['SYMBOL'].str.strip().str.upper(),
+                        df[name_col].str.strip()
+                    ))
+                    logger.info("✅ Loaded %d symbol-to-name mappings from cache", len(_SYMBOL_NAME_MAP))
+                else:
+                    logger.warning("No company name column found in cache")
+                    _SYMBOL_NAME_MAP = {}
+            except Exception as e:
+                logger.warning("Failed to load symbol mapping from cache: %s, trying CSV", e)
+                _SYMBOL_NAME_MAP = None
+
+        # Fallback to CSV if cache not available
+        if _SYMBOL_NAME_MAP is None:
+            if not csv_path.exists():
+                logger.warning("NSE symbol-company mapping not found at %s", csv_path)
+                return {
+                    "symbol": symbol,
+                    "company_name": symbol,  # Fallback to symbol
+                    "found": False,
+                    "error": "nse_symbol_company_mapping not found"
+                }
+
+            try:
+                logger.info("📂 Loading symbol-company mapping from CSV...")
+                # Read CSV and create symbol->name mapping
+                df = pd.read_csv(csv_path)
+                # Strip whitespace from column names and values
+                df.columns = df.columns.str.strip()
+                _SYMBOL_NAME_MAP = dict(zip(
+                    df['SYMBOL'].str.strip().str.upper(),
+                    df['NAME OF COMPANY'].str.strip()
+                ))
+                logger.info("✅ Loaded %d symbol-to-name mappings from CSV", len(_SYMBOL_NAME_MAP))
+            except Exception as e:
+                logger.error("Failed to load NSE symbol-company mapping: %s", e)
+                return {
+                    "symbol": symbol,
+                    "company_name": symbol,
+                    "found": False,
+                    "error": str(e)
+                }
 
     # Lookup symbol (case-insensitive)
     symbol_upper = symbol.strip().upper()
@@ -128,7 +158,7 @@ def get_monthly_dirs_for_date_range(
 
     Example:
         >>> get_monthly_dirs_for_date_range('2024-07-15', '2024-09-20')
-        ['./investor_agent/data/vector-data/202407', 
+        ['./investor_agent/data/vector-data/202407',
         './investor_agent/data/vector-data/202408', './investor_agent/data/vector-data/202409']
     """
     from datetime import datetime
