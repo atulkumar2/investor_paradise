@@ -70,7 +70,7 @@ root_agent = create_pipeline(
     entry_model=lite_model,        # Flash-Lite for Entry (simple classification)
     market_model=flash_model, # Flash for Market (complex analysis with tools)
     news_model=lite_model,         # Flash-Lite for News (simple google search)
-    merger_model=pro_model   # Pro for Merger (report synthesis)
+    merger_model=flash_model   # Pro for Merger (report synthesis)
 )
 
 # Override root_agent's module path to fix ADK path detection issue

@@ -205,12 +205,16 @@ class TokenTracker:
 # Session Management
 # ============================================================================
 
-USER_FILE = "investor_agent/data/user.json"
+# Use Path to find the data directory relative to the investor_agent package
+from pathlib import Path as PathLib
+
+_data_dir = PathLib(__file__).parent / "investor_agent" / "data"
+USER_FILE = _data_dir / "user.json"
 
 def get_or_create_user_id():
     """Load or create persistent user_id (NOT session_id -
     that's managed by DatabaseSessionService)"""
-    if os.path.exists(USER_FILE):
+    if USER_FILE.exists():
         try:
             with open(USER_FILE, 'r') as f:
                 data = json.load(f)

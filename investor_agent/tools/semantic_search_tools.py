@@ -8,6 +8,7 @@ This module handles:
 """
 
 import os
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -142,7 +143,7 @@ def get_company_name(symbol: str) -> dict:
 def get_monthly_dirs_for_date_range(
     start_date: str,
     end_date: str,
-    base_dir: str = "./investor_agent/data/vector-data",
+    base_dir: str | None = None,
 ) -> list[str]:
     """Generate list of monthly directory paths for a date range.
 
@@ -151,7 +152,7 @@ def get_monthly_dirs_for_date_range(
     Args:
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
-        base_dir: Base directory containing monthly subdirectories
+        base_dir: Base directory containing monthly subdirectories (defaults to package vector-data)
 
     Returns:
         List of existing directory paths (e.g., ['./vector-data/202407', './vector-data/202408'])
@@ -161,7 +162,11 @@ def get_monthly_dirs_for_date_range(
         ['./investor_agent/data/vector-data/202407',
         './investor_agent/data/vector-data/202408', './investor_agent/data/vector-data/202409']
     """
-    from datetime import datetime
+
+
+    if base_dir is None:
+        base_dir_path = Path(__file__).parent.parent / "data" / "vector-data"
+        base_dir = str(base_dir_path)
 
     try:
         start = datetime.strptime(start_date, "%Y-%m-%d")
@@ -209,7 +214,7 @@ def init_search_resources(
     Args:
         persist_dir: Comma or colon-separated list of directories containing ChromaDB data.
                     Can be single directory or multiple (e.g., "./investor_agent/data/vector-data/202407,./investor_agent/data/vector-data/202408").
-                    If None, uses NEWS_PERSIST_DIR environment variable or defaults to './investor_agent/data/vector-data'
+                    If None, uses NEWS_PERSIST_DIR environment variable or defaults to package's vector-data directory
         collection_name: Name of the ChromaDB collection to load (default: 'pdf_chunks')
         model_name: SentenceTransformer model name for embeddings (default: 'intfloat/multilingual-e5-base')
     """
@@ -223,7 +228,13 @@ def init_search_resources(
         return
 
     if persist_dir is None:
-        persist_dir = os.environ.get("NEWS_PERSIST_DIR", "./investor_agent/data/vector-data")
+        # Check environment variable first, otherwise use Path-based default
+        persist_dir_env = os.environ.get("NEWS_PERSIST_DIR")
+        if persist_dir_env:
+            persist_dir = persist_dir_env
+        else:
+            default_path = Path(__file__).parent.parent / "data" / "vector-data"
+            persist_dir = str(default_path)
 
     # Split on comma and os.pathsep (':'), strip empties
     raw_parts = []

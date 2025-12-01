@@ -45,15 +45,17 @@ The information, analysis, recommendations, and trading strategies provided by *
   - [2. Install Dependencies with `uv`](#2-install-dependencies-with-uv)
   - [3. Configure API Key](#3-configure-api-key)
   - [4. Data Setup (Automatic)](#4-data-setup-automatic)
+- [📦 Installation from PyPI](#📦-installation-from-pypi)
 - [Running the Agent](#running-the-agent)
   - [Option 1: Web UI (ADK Web)](#option-1-web-ui-adk-web)
   - [Option 2: Command Line (CLI)](#option-2-command-line-cli)
-- [Troubleshooting](#troubleshooting)
+  - [Option 3: 🐳 Docker Deployment](#option-3-🐳-docker-deployment)
 - [Sample Questions](#sample-questions)
+- [Troubleshooting](#troubleshooting)
 - [Project Structure](#project-structure)
 - [Advanced Configuration](#advanced-configuration)
-- [🐳 Docker Deployment](#-docker-deployment)
 - [Linting & Formatting](#linting--formatting)
+- [Testing & Evaluations](#testing--evaluations)
 - [Dependencies](#dependencies)
 - [Contributing](#contributing)
 - [License](#license)
@@ -184,7 +186,6 @@ exit    # Save and exit (history preserved)
 ### 💾 Performance Optimizations & Caching
 
 #### Parquet Caching System
-
 - **Faster data loading**: Optimized with Parquet format for 1M+ rows
 - **Automatic cache generation**: Downloads from GitHub releases on first run
 - **4 cache files**:
@@ -196,7 +197,6 @@ exit    # Save and exit (history preserved)
 - **Offline-ready**: Cache files work without CSV source data
 
 #### Runtime Optimizations
-
 - **Lazy loading**: Models instantiated only when needed
 - **Parallel news agents**: PDF + web search run concurrently
 - **Streaming responses**: Progressive output display for better UX (CLI)
@@ -286,7 +286,6 @@ You can access Investor Paradise on multiple platforms:
 All methods use the same agent pipeline, data, and session management—choose based on your workflow and infrastructure.
 
 **Repositories**:
-
 - **Main Codebase**: [https://github.com/atulkumar2/investor_paradise](https://github.com/atulkumar2/investor_paradise)
 - **NSE Data**: [https://github.com/atulkumar2/investor_agent_data](https://github.com/atulkumar2/investor_agent_data)
 
@@ -341,7 +340,6 @@ uv run cli.py
 ```
 
 **Your API key is stored securely:**
-
 - **macOS**: Keychain Access
 - **Windows**: Windows Credential Locker
 - **Linux**: Secret Service (gnome-keyring/KWallet)
@@ -392,7 +390,6 @@ uv run cli.py
 ```
 
 **What gets downloaded:**
-
 - **combined_data.parquet** (49MB): Historical stock price data (2019-2025)
 - **nse_indices_cache.parquet** (44KB): Index constituents (NIFTY 50, BANK, IT, etc.)
 - **nse_sector_cache.parquet** (22KB): Sector mappings (2,050+ stocks, 31 sectors)
@@ -404,6 +401,39 @@ uv run cli.py
 ```bash
 uv run cli.py --refresh-cache
 ```
+
+---
+
+## 📦 Installation from PyPI
+
+You can install Investor Paradise CLI as a package without cloning the repository.
+
+**📖 Full Installation Guide**: See [CLI_USAGE.md](CLI_USAGE.md) for detailed installation instructions using `uv`.
+
+**Quick Install:**
+
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Google ADK (pre-requisite)
+uv pip install "google-adk @ git+https://github.com/google/adk-python/"
+
+# Install Investor Paradise CLI
+uv tool install investor-paradise-cli
+
+# Run from anywhere
+investor-paradise-cli
+```
+
+**What you get:**
+- ✅ No repository cloning needed
+- ✅ Global CLI access from any directory
+- ✅ Automatic data downloads on first run
+- ✅ Secure API key management via system keyring
+- ✅ Session persistence and history
+
+**For complete setup options, troubleshooting, and advanced usage, see [CLI_USAGE.md](CLI_USAGE.md).**
 
 ---
 
@@ -481,6 +511,85 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 4. Tracks tokens/cost and saves session to SQLite database
 5. Session persists—resume anytime by selecting from session list
 
+
+### Option 3: 🐳 Docker Deployment
+
+#### Quick Start with Docker
+
+**1. Build the Docker image:**
+
+```bash
+docker build -t investor-paradise:latest .
+```
+
+
+
+**3. Run with Docker CLI:**
+
+```bash
+# Web mode (ADK web server)
+docker run --rm -e GOOGLE_API_KEY="your_api_key" -p 8000:8000 investor-paradise
+
+# CLI mode (interactive terminal)
+docker run --rm -it -e GOOGLE_API_KEY="your_api_key" investor-paradise cli
+```
+
+#### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GOOGLE_API_KEY` | ✅ Yes | - | Your Google AI API key |
+| `SESSION_CLEANUP_DAYS` | ❌ No | 7 | Delete sessions older than N days |
+
+
+
+#### Container Logs
+
+```bash
+# View real-time logs
+docker-compose logs -f
+
+# View specific container logs
+docker logs investor-paradise-agent
+
+# Check health status
+docker inspect investor-paradise-agent | grep -A 5 Health
+```
+
+#### Stopping the Agent
+
+```bash
+# Stop container (if running with -d flag)
+docker stop investor-paradise
+docker rm investor-paradise
+```
+
+#### Production Deployment
+
+For production environments:
+
+1. **Use named volumes** (instead of bind mounts) for better performance:
+
+   ```yaml
+   volumes:
+     - cache-data:/app/investor_agent/data/cache
+     - session-data:/app/investor_agent/data
+   ```
+
+2. **Enable resource limits** in `docker-compose.yml`:
+
+   ```yaml
+   deploy:
+     resources:
+       limits:
+         cpus: '2.0'
+         memory: 4G
+   ```
+
+3. **Set up reverse proxy** (e.g., nginx) for SSL/HTTPS
+4. **Configure monitoring** (Prometheus + Grafana)
+5. **Set up backup** for `sessions.db` and cache files
+
 ---
 
 ---
@@ -490,8 +599,7 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 ### Cache Download Issues
 
 **Problem**: Cache files fail to download from GitHub releases  
-**Solution**:
-
+**Solution**: 
 - Check your internet connection
 - Verify GitHub is accessible from your network
 - If behind a corporate firewall, you may need to configure proxy settings
@@ -499,7 +607,6 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 
 **Problem**: "Cache files not found" error  
 **Solution**: 
-
 - Run `uv run cli.py --refresh-cache` to force re-download
 - Ensure you have write permissions to `investor_agent/data/cache/` directory
 - Check if cache files exist in `investor_agent/data/cache/` (should see 4 `.parquet` files)
@@ -737,86 +844,6 @@ grep "Token Usage" cli.log | tail -10
 
 ---
 
-## 🐳 Docker Deployment
-
-### Quick Start with Docker
-
-**1. Build the Docker image:**
-
-```bash
-docker build -t investor-paradise:latest .
-```
-
-
-
-**3. Run with Docker CLI:**
-
-```bash
-# Web mode (ADK web server)
-docker run --rm -e GOOGLE_API_KEY="your_api_key" -p 8000:8000 investor-paradise
-
-# CLI mode (interactive terminal)
-docker run --rm -it -e GOOGLE_API_KEY="your_api_key" investor-paradise cli
-```
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GOOGLE_API_KEY` | ✅ Yes | - | Your Google AI API key |
-| `SESSION_CLEANUP_DAYS` | ❌ No | 7 | Delete sessions older than N days |
-
-
-
-### Container Logs
-
-```bash
-# View real-time logs
-docker-compose logs -f
-
-# View specific container logs
-docker logs investor-paradise-agent
-
-# Check health status
-docker inspect investor-paradise-agent | grep -A 5 Health
-```
-
-### Stopping the Agent
-
-```bash
-# Stop container (if running with -d flag)
-docker stop investor-paradise
-docker rm investor-paradise
-```
-
-### Production Deployment
-
-For production environments:
-
-1. **Use named volumes** (instead of bind mounts) for better performance:
-
-   ```yaml
-   volumes:
-     - cache-data:/app/investor_agent/data/cache
-     - session-data:/app/investor_agent/data
-   ```
-
-2. **Enable resource limits** in `docker-compose.yml`:
-
-   ```yaml
-   deploy:
-     resources:
-       limits:
-         cpus: '2.0'
-         memory: 4G
-   ```
-
-3. **Set up reverse proxy** (e.g., nginx) for SSL/HTTPS
-4. **Configure monitoring** (Prometheus + Grafana)
-5. **Set up backup** for `sessions.db` and cache files
-
----
-
 ## Linting & Formatting
 
 ```bash
@@ -828,6 +855,67 @@ ruff format .
 # or
 black .
 ```
+
+---
+
+## Testing & Evaluations
+
+Investor Paradise includes a comprehensive evaluation suite to ensure agent quality and prevent regressions.
+
+### 🧪 Test Coverage
+
+- **12 Integration Tests**: Fixed test cases validating core functionality
+  - Greeting & capability queries
+  - Data retrieval (sector lists, index constituents)
+  - Full analysis pipeline (stock analysis + news + recommendations)
+  - Security (prompt injection defense)
+
+- **6 User Simulation Tests**: Dynamic conversation scenarios
+  - Multi-turn conversations
+  - Contextual follow-ups
+  - Real-world usage patterns
+
+### 🚀 Quick Start
+
+```bash
+# Run integration tests (recommended)
+adk eval investor_agent evaluations/integration.evalset.json \
+  --config_file_path=evaluations/test_config.json \
+  --print_detailed_results
+
+# Expected output:
+# ✅ test_01_greeting: PASS (Tool: 1.0/0.85, Response: 0.95/0.70)
+# ✅ test_02_capability_query: PASS (Tool: 1.0/0.85, Response: 0.88/0.70)
+# ✅ test_03_automobile_sector_list: PASS (Tool: 1.0/0.85, Response: 0.92/0.70)
+# ...
+```
+
+### 📊 Evaluation Metrics
+
+| Metric | Threshold | What It Measures |
+|--------|-----------|------------------|
+| **Tool Trajectory** | ≥ 0.85 | Correct tool usage & parameters |
+| **Response Match** | ≥ 0.70 | Response quality & formatting |
+
+### 📚 Full Documentation
+
+For detailed evaluation setup, custom test creation, and CI/CD integration:
+
+**👉 See [evaluations/README.md](evaluations/README.md)** for:
+- Complete test suite documentation
+- How to run evaluations
+- Adding new test cases
+- Interpreting results
+- Regression testing strategy
+- Troubleshooting guide
+
+### ✅ Quality Gates
+
+**Minimum passing criteria for production:**
+- ✅ All integration tests pass (12/12)
+- ✅ Tool trajectory avg ≥ 0.85
+- ✅ Response match avg ≥ 0.70
+- ✅ No security failures
 
 ---
 
@@ -888,6 +976,8 @@ This project is licensed under the MIT License—see LICENSE file for details.
 - **Google ADK** for multi-agent framework
 - **NSE India** for market data
 - **Gemini AI** for language models
+
+
 
 ## Support
 
