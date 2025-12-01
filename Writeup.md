@@ -36,8 +36,7 @@ By the time you figure out why Automotive Stock fell despite strong earnings (hi
 ---
 
 ## **The Solution**  
-✅ **Investor Paradise** – Your personal AI-powered research firm.  
-Not a chatbot. Not generic advice.  
+✅ **Investor Paradise** – Your personal AI-powered research firm. This is not a chatbot / Not generic advice.  
 A **multi-agent architecture of intelligence** that combines:  
 1. 🧠 **Wall Street-grade Quant Analyst**  
 2. 🔍 **Real-time News Intelligence Researcher**  
@@ -67,7 +66,7 @@ A **multi-agent architecture of intelligence** that combines:
 Investor Paradise isn’t just another stock screener or chatbot. It’s a **research-grade AI system** designed for speed, depth, and accuracy.
 
 ### ✅ **Quantitative Analysis**
-- 24 specialized tools for:
+- 25 specialized tools for:
   - Calculating returns
   - Detecting technical patterns
   - Analyzing risk metrics
@@ -179,7 +178,7 @@ Investor Paradise creates a virtual team of **five specialized AI agents**, work
    Filters prompt injections, ensures queries are finance-focused.  
 
 2. **The Math Whiz (Market Analyst)**  
-   Runs 24 financial functions on 5 years of NSE data—volatility checks, index screening, technical patterns—instantly.  
+   Runs 25 financial functions on 5 years of NSE data—volatility checks, index screening, technical patterns—instantly.  
 
 3. **The Intelligence Network (Parallel Processing)**  
    Two agents in action:  
@@ -200,7 +199,7 @@ Investor Paradise creates a virtual team of **five specialized AI agents**, work
 | Method         | Use Case                             | Features                                          |
 | -------------- | ------------------------------------ | ------------------------------------------------- |
 | **ADK Web UI** | Interactive analysis, exploration    | Visual chat interface, session history, web-based |
-| **CLI**        | Quick queries, automation, scripting | Fast, scriptable, terminal-based                  |
+| **CLI**        | Quick queries, automation, scripting | Rich-formatted output, session management, token tracking|
 
 Both use the same agent pipeline and data—choose based on your workflow.
 
@@ -415,7 +414,7 @@ Just **informed decisions at your fingertips**.
 
 
 ✅ **First-of-its-kind multi-agent system for Indian markets**  
-✅ **24 specialized financial functions**  
+✅ **25 specialized financial functions**  
 ✅ **Real-time + historical intelligence fusion**  
 
 
