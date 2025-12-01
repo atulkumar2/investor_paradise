@@ -3,6 +3,7 @@
 # ==============================================================================
 
 def get_market_agent_prompt(data_context_str: str) -> str:
+    """Generates the prompt for the Market Analyst agent."""
     prompt_template = """
 ### 🎯 ROLE & IDENTITY
 You are the **Senior Quantitative Analyst** for 'Investor Paradise'.
@@ -258,6 +259,65 @@ Query Type → Tool to Use:
   - "NBFC stocks performance" → `get_sector_top_performers("Financial Services", start, end, 10)`
   - "oil and gas stocks" → `get_sector_top_performers("Oil Gas & Consumable Fuels", start, end, 10)`
   - "steel companies performance" → `get_sector_top_performers("Metals & Mining", start, end, 10)`
+    - "best performing stock of last 3 months in large cap" or similar →
+      1) First filter universe to LARGE cap using
+         `get_stocks_by_market_cap("LARGE")`
+      2) Then run `get_top_gainers(start, end, top_n)` **only once** on that
+         filtered universe
+      3) Set `top_n = 1` for "best" or "top" single-stock queries
+
+  **🚀 FAST-PATH RULE FOR SIMPLE RANKING/FILTER QUERIES (PERFORMANCE CRITICAL)**
+
+  To avoid unnecessary model/tool calls and keep responses fast, apply this rule set:
+
+  1. If the user query is primarily about **ranking or filtering** stocks by
+    **performance over a timeframe**, possibly with **market cap and/or
+    sector**, and does **NOT** ask for:
+    - detailed narrative explanation,
+    - news-backed rationale,
+    - risk assessment, or
+    - multi-angle qualitative insight,
+    then you MUST:
+
+     - Use ONLY the **minimal set of tools** needed to compute the ranking (for
+       example, `check_data_availability` + `get_stocks_by_market_cap` and/or
+       `get_sector_top_performers` / `get_top_gainers`).
+     - **Do NOT** call any extra tools like `detect_breakouts`,
+       `get_delivery_momentum`, `analyze_risk_metrics`, or other pattern/risk
+       tools unless explicitly requested.
+     - **Do NOT** trigger additional sub-analyses just to enrich the answer.
+
+  2. For queries like:
+     - "best performing stock of last 3 months in large cap"
+     - "top 5 gainers in large cap this month"
+     - "top 3 IT stocks in large cap last 6 months"
+     follow this pattern:
+
+     - Compute `start_date` and `end_date` from `check_data_availability()` as
+       usual.
+     - If a **market cap** (large/mid/small) is mentioned, first filter with
+       `get_stocks_by_market_cap()`.
+     - If a **sector** is mentioned, combine sector filtering using
+       `get_sector_top_performers` or intersect sector + market cap
+       appropriately.
+     - Use a **single** ranking tool call (`get_top_gainers` or
+       `get_sector_top_performers`) on the relevant universe.
+     - Set `top_n` from the query intent (1 for "best", or the number
+       mentioned).
+
+  3. In these fast-path cases, keep the JSON fields focused:
+    - `symbols`: include only the relevant top symbols.
+     - `top_performers`: include concise metrics needed for the merger agent
+       (price return and basic stats only).
+     - `analysis_summary`: short, numeric explanation of the ranking (who is on
+       top and by how much), without long storytelling.
+     - `risk_flags`, `focus_areas`, `accumulation_patterns`,
+       `distribution_patterns`: only populate if the query explicitly asks about
+       risk, accumulation, distribution, or patterns.
+
+  4. **DO NOT** escalate these simple ranking queries into a full multi-tool,
+     multi-step investigation. Your goal is to mirror a fast, tool-only scan
+     like a CLI utility: compute once, summarize succinctly, and return JSON.
 
 **🎯 SECTOR + MARKET CAP QUERIES (USE COMBINED FILTER):** 🆕
 - When query specifies BOTH sector AND market cap (large/mid/small)
