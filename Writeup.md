@@ -104,6 +104,16 @@ Beautifully formatted terminal output with:
 - **Responsive layouts** that adapt to terminal width
 - **Live updates** showing which tools are executing in real-time
 
+### 🔐 Secure API Key Management (Keyring)
+
+Smart multi-tier API key storage with automatic fallback:
+
+- **System keyring integration**: Securely stores API key in OS credential manager (macOS Keychain, Windows Credential Locker, Linux Secret Service)
+- **Automatic fallback**: Uses encrypted config file if keyring unavailable
+- **Priority hierarchy**: Environment variable > Keyring > Config file > User prompt
+- **One-time setup**: Enter API key once, securely saved for future sessions
+- **Easy reset**: `--reset-api-key` flag to update stored credentials
+
 ### 💾 Intelligent Memory Management (Event Compaction)
 - **Automatic context optimization** compresses conversation history to stay within token limits
 - **Smart summarization** preserves critical information while reducing context size by 60-80%
