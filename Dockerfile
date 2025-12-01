@@ -33,15 +33,6 @@ COPY cli.py cli_helpers.py spinner.py ./
 COPY pyproject.toml uv.lock* .python-version ./
 RUN uv sync --frozen || uv sync
 
-# Remove build dependencies to reduce image size
-RUN apt-get purge -y --auto-remove gcc git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* \
-           *.egg-info \
-           .eggs \
-           build \
-           dist
-
 # Create data directories
 RUN mkdir -p ./investor_agent/data/cache \
              ./investor_agent/data/NSE_RawData \
@@ -80,6 +71,15 @@ RUN echo "📦 Downloading all News store archives..." && \
         rm ./investor_agent/data/vector-data/$MONTH.zip; \
     done && \
     echo "🎉 News store archives processed successfully for 202506, 202507, 202508"
+
+# Remove build dependencies to reduce image size
+RUN apt-get purge -y --auto-remove unzip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* \
+           *.egg-info \
+           .eggs \
+           build \
+           dist
 
 # Expose web port
 EXPOSE 8000
