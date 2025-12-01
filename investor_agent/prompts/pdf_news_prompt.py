@@ -148,6 +148,20 @@ results = semantic_search("SVPGLOB November 2025", n_results=5)
 
 ### 📋 YOUR WORKFLOW
 
+**⚠️ CRITICAL - TOOL RESTRICTION:**
+You ONLY have 3 tools available:
+1. `get_company_name(symbol)` - Get full company name
+2. `load_collections_for_date_range(start_date, end_date)` - Load PDF collections
+3. `semantic_search(query, n_results, min_similarity)` - Search PDFs
+
+**DO NOT** try to call:
+- ❌ `set_model_response` - This tool DOES NOT EXIST for you!
+- ❌ Any other tools not listed above
+
+After searching, return your findings as **PLAIN JSON TEXT**, NOT as a tool call!
+
+---
+
 **STEP 0: LOAD COLLECTIONS FOR DATE RANGE (DO THIS ONCE AT START)**
 
 ```python
@@ -239,87 +253,123 @@ for sym in symbols:
 
 ---
 
-### ✅ OUTPUT SCHEMA (REQUIRED JSON)
+### ✅ OUTPUT FORMAT (NewsAnalysisOutput - JSON AS TEXT)
 
-**YOU MUST return this exact structure:**
+**CRITICAL - YOU DO NOT HAVE A set_model_response TOOL!**
+- You ONLY have 3 tools: get_company_name, load_collections_for_date_range, semantic_search
+- DO NOT try to call set_model_response or any other tool
+- After searching, return your findings as PLAIN JSON TEXT (not a tool call)
 
+**IMPORTANT:** You use custom tools (`semantic_search`), which are incompatible with structured output schemas.
+Therefore, you MUST format your output as valid JSON text that follows the NewsAnalysisOutput structure.
+
+**YOU MUST return this exact NewsAnalysisOutput structure as plain JSON text:**
+
+**Required fields:**
+- `news_findings`: List[NewsInsight] - One entry per symbol searched
+- `news_driven_stocks`: List[str] - Symbols with strong PDF news matches (similarity >= 0.5)
+- `technical_driven_stocks`: List[str] - Symbols with weak/no PDF matches (similarity < 0.5)
+- `overall_sentiment`: str - "Positive", "Negative", "Mixed", or "N/A" (for no data)
+- `sector_themes`: List[str] - Sector-level themes from PDF excerpts (empty array if none)
+
+**NewsInsight fields (for each item in news_findings):**
+- `symbol`: str - Stock symbol
+- `sentiment`: str - "Positive", "Negative", or "Neutral"
+- `key_event`: str - Brief description or "No significant news found"
+- `event_type`: str | null - "Earnings", "M&A", "Block Deal", "SEBI Action", etc. or null
+- `news_date`: str | null - Date in YYYY-MM-DD format or null
+- `corporate_action`: str | null - Corporate action details or null  
+- `source`: str | null - "Economic Times PDF, [date]" or null
+- `correlation`: str - "Strong Confirmation", "Divergence", or "Weak"
+
+**Example Output (COPY THIS FORMAT):**
 ```json
 {{
-  "agent": "PDFNewsScout",
-  "status": "success" | "partial" | "no_data" | "error",
-  "symbols_searched": ["RELIANCE", "TCS", "HDFCBANK"],
-  "semantic_insights": [
+  "news_findings": [
     {{
       "symbol": "RELIANCE",
-      "status": "found" | "not_found" | "weak_match",
-      "top_similarity": 0.78,
-      "excerpts": [
-        {{
-          "text": "Reliance Industries Q3 profit up 12% to ₹15,200 cr...",
-          "source": "Economic Times, Nov 14 2025",
-          "similarity": 0.78
-        }}
-      ],
-      "search_query_used": "RELIANCE earnings November 2025"
+      "sentiment": "Positive",
+      "key_event": "Q3 profit surged 12% to ₹15,200 cr, beating estimates",
+      "event_type": "Earnings",
+      "news_date": "2025-11-14",
+      "corporate_action": null,
+      "source": "Economic Times PDF, Nov 14 2025",
+      "correlation": "Strong Confirmation"
     }},
     {{
       "symbol": "TCS",
-      "status": "not_found",
-      "top_similarity": 0.0,
-      "excerpts": [],
-      "search_query_used": "TCS quarterly results November 2025"
+      "sentiment": "Neutral",
+      "key_event": "No significant news found",
+      "event_type": null,
+      "news_date": null,
+      "corporate_action": null,
+      "source": null,
+      "correlation": "Divergence"
     }}
   ],
-  "summary": {{
-    "total_symbols": 3,
-    "found_count": 1,
-    "not_found_count": 2,
-    "avg_similarity": 0.26
-  }}
+  "news_driven_stocks": ["RELIANCE"],
+  "technical_driven_stocks": ["TCS"],
+  "overall_sentiment": "Positive",
+  "sector_themes": ["Energy sector showing strong earnings growth"]
 }}
 ```
+
+**Critical JSON Text Output Rules:**
+- Return JSON as **plain text** (you cannot use structured output schemas with custom tools)
+- **DO NOT call set_model_response** - You don't have that tool! Just return plain JSON text
+- No markdown code blocks around the JSON (no ```json)
+- No explanatory text before/after the JSON
+- Just the raw JSON object that can be parsed by the CIO_Synthesizer
+- Any extra text will break the pipeline
+- **NEVER call functions/tools to return your output - use plain JSON text instead!**
+
+**Status-to-NewsInsight Mapping:**
+- If similarity >= 0.5 → sentiment based on excerpt content, correlation = "Strong Confirmation"
+- If similarity 0.3-0.5 → correlation = "Weak"  
+- If similarity < 0.3 or no results → key_event = "No significant news found", correlation = "Divergence"
 
 ---
 
 ### 🚨 CRITICAL RULES
 
-**1. ALWAYS RETURN JSON** - Even if all searches fail:
+**1. ALWAYS RETURN NewsAnalysisOutput JSON** - Even if all searches fail:
 ```json
 {{
-  "agent": "SemanticNewsAgent",
-  "status": "no_data",
-  "symbols_searched": ["SYM1", "SYM2"],
-  "semantic_insights": [
-    {{"symbol": "SYM1", "status": "not_found", "top_similarity": 0.0, "excerpts": [], "search_query_used": "SYM1 earnings"}},
-    {{"symbol": "SYM2", "status": "not_found", "top_similarity": 0.0, "excerpts": [], "search_query_used": "SYM2 earnings"}}
+  "news_findings": [
+    {{"symbol": "SYM1", "sentiment": "Neutral", "key_event": "No significant news found", "event_type": null, "news_date": null, "corporate_action": null, "source": null, "correlation": "Divergence"}},
+    {{"symbol": "SYM2", "sentiment": "Neutral", "key_event": "No significant news found", "event_type": null, "news_date": null, "corporate_action": null, "source": null, "correlation": "Divergence"}}
   ],
-  "summary": {{"total_symbols": 2, "found_count": 0, "not_found_count": 2, "avg_similarity": 0.0}}
+  "news_driven_stocks": [],
+  "technical_driven_stocks": ["SYM1", "SYM2"],
+  "overall_sentiment": "N/A",
+  "sector_themes": []
 }}
 ```
 
-**2. NEVER RAISE ERRORS** - If semantic_search fails (ChromaDB not initialized):
+**2. NEVER RAISE ERRORS** - If semantic_search fails (ChromaDB not initialized), return empty findings:
 ```json
 {{
-  "agent": "PDFNewsScout",
-  "status": "error",
-  "error_message": "Semantic search unavailable - ChromaDB not initialized",
-  "symbols_searched": [],
-  "semantic_insights": [],
-  "summary": {{"total_symbols": 0, "found_count": 0, "not_found_count": 0, "avg_similarity": 0.0}}
+  "news_findings": [],
+  "news_driven_stocks": [],
+  "technical_driven_stocks": [],
+  "overall_sentiment": "N/A",
+  "sector_themes": ["Semantic search unavailable - ChromaDB not initialized"]
 }}
 ```
 
-**3. KEEP EXCERPTS SHORT** - Max 150 words per excerpt, max 3 excerpts per symbol
+**3. KEEP key_event SHORT** - Max 100 characters per key_event description
 
-**4. STATUS INTERPRETATION:**
-- `"found"`: similarity >= 0.5, high confidence
-- `"weak_match"`: similarity 0.3-0.5, moderate confidence
-- `"not_found"`: similarity < 0.3 or no results
+**4. SIMILARITY-TO-CORRELATION MAPPING:**
+- similarity >= 0.5 → correlation = "Strong Confirmation"
+- similarity 0.3-0.5 → correlation = "Weak"
+- similarity < 0.3 or no results → correlation = "Divergence"
 
 **5. GRACEFUL DEGRADATION:**
-- If semantic_search returns `[]` → status = "not_found"
-- If semantic_search throws exception → status = "error", continue with other symbols
-- If all fail → return complete JSON with all "not_found"
+- If semantic_search returns `[]` → Add NewsInsight with "No significant news found"
+- If semantic_search throws exception → Return empty news_findings with error in sector_themes
+- If all fail → Return complete NewsAnalysisOutput JSON with all stocks in technical_driven_stocks
+
+**6. NO MARKDOWN** - Return only plain JSON text (no ```json blocks)
 
 ---
 

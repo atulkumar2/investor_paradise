@@ -134,8 +134,14 @@ class NSEDataStore:
     Handles bhavdata CSV files with proper schema normalization.
     """
 
-    def __init__(self, root_path: str = "investor_agent/data"):
-        self.root = Path(root_path)
+    def __init__(self, root_path: Optional[str] = None):
+        if root_path is None:
+            # Use Path to find the investor_agent package directory
+            investor_agent_dir = Path(__file__).parent
+            self.root = investor_agent_dir / "data"
+        else:
+            self.root = Path(root_path)
+
         self.cache_file = self.root / "cache" / "combined_data.parquet"
         self._combined_cache: Optional[pd.DataFrame] = None
         self.min_date: Optional[date] = None

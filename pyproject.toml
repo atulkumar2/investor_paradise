@@ -7,14 +7,14 @@ name = "investor-paradise-cli"
 version = "0.1.1"
 description = "AI-powered NSE stock analysis agent with interactive CLI and web interface"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "==3.11.14"
 license = "MIT"
 authors = [
-    {name = "Investor Paradise Team", email = "divyadarsheedas@gmail.com"}
+    {name = "Divyadarshee Das", email = "divyadarsheedas@gmail.com"},
+    {name = "Atul Kumar", email = "atul.kr.369@gmail.com"}
 ]
 keywords = ["stocks", "nse", "analysis", "ai", "gemini", "trading", "investment"]
 dependencies = [
-    "google-adk @ git+https://github.com/google/adk-python/",
     "google-genai",
     "pandas",
     "python-dotenv",

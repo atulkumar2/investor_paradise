@@ -19,7 +19,11 @@ from google.genai import types
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from cache_manager import ensure_cache_available, refresh_cache
+from cache_manager import (
+    ensure_cache_available,
+    ensure_vector_data_available,
+    refresh_cache,
+)
 from cli_helpers import (
     AgentProgressTracker,
     TokenTracker,
@@ -62,6 +66,17 @@ def _handle_cli_args() -> bool:
             console.print("[yellow]Please check your internet connection and try again.[/yellow]\n")
         return True
 
+    if "--download-vector-data" in sys.argv:
+        console.print("\n[bold cyan]📦 Downloading vector data...[/bold cyan]")
+        logger.info("User requested vector data download")
+        if ensure_vector_data_available():
+            console.print("[bold green]✅ Vector data downloaded successfully![/bold green]")
+            console.print("[dim]You can now run the CLI normally.[/dim]\n")
+        else:
+            console.print("[bold red]❌ Vector data download failed![/bold red]")
+            console.print("[yellow]Please check your internet connection and try again.[/yellow]\n")
+        return True
+
     return False
 
 
@@ -86,14 +101,13 @@ def _get_api_key() -> str | None:
 def _initialize_data() -> None:
     """Load NSE data and log basic context."""
     # Display ASCII art logo (embedded directly to avoid packaging issues)
-    logo = """
- _____                    _              ______                   _ _
-│_   _│                  │ │             │ ___ ╲                 │ (_)
-  │ │ _ ____   _____  ___│ │_ ___  _ __  │ │_╱ ╱_ _ _ __ __ _  __│ │_ ___  ___
-  │ ││ '_ ╲ ╲ ╱ ╱ _ ╲╱ __│ __╱ _ ╲│ '__│ │  __╱ _` │ '__╱ _` │╱ _` │ ╱ __│╱ _ ╲
- _│ ││ │ │ ╲ V ╱  __╱╲__ ╲ ││ (_) │ │    │ │ │ (_│ │ │ │ (_│ │ (_│ │ ╲__ ╲  __╱
- ╲___╱_│ │_│╲_╱ ╲___││___╱╲__╲___╱│_│    ╲_│  ╲__,_│_│  ╲__,_│╲__,_│_│___╱╲___│
-
+    logo = """ _____                    _              ______                   _ _           
+│_   _│                  │ │             │ ___ ╲                 │ (_)          
+  │ │ _ ____   _____  ___│ │_ ___  _ __  │ │_╱ ╱_ _ _ __ __ _  __│ │_ ___  ___  
+  │ ││ '_ ╲ ╲ ╱ ╱ _ ╲╱ __│ __╱ _ ╲│ '__│ │  __╱ _` │ '__╱ _` │╱ _` │ ╱ __│╱ _ ╲ 
+ _│ ││ │ │ ╲ V ╱  __╱╲__ ╲ ││ (_) │ │    │ │ │ (_│ │ │ │ (_│ │ (_│ │ ╲__ ╲  __╱ 
+ ╲___╱_│ │_│╲_╱ ╲___││___╱╲__╲___╱│_│    ╲_│  ╲__,_│_│  ╲__,_│╲__,_│_│___╱╲___│ 
+                                                                                
                     Your AI-Powered NSE Stock Market Intelligence Platform 📊
                         Data-Driven Insights • News Intelligence • Smart Analysis
 """
@@ -102,13 +116,20 @@ def _initialize_data() -> None:
     console.print("\n[bold cyan]🚀 Initializing Investor Paradise...[/bold cyan]")
     logger.info("Initializing Investor Paradise CLI")
 
-    # Ensure cache files are available (download if missing)
-    console.print("\n[bold blue]📦 Checking cache files...[/bold blue]")
-    logger.info("Checking cache availability")
+    # Ensure cache files and vector data are available (download if missing)
+    console.print("\n[bold blue]📦 Checking if latest market data parquet cache and Economic Times news vector data is available...[/bold blue]")
+    logger.info("Checking data availability")
+    
     if not ensure_cache_available():
         console.print("[bold red]❌ Failed to download cache files![/bold red]")
         console.print("[yellow]Please check your internet connection and try again.[/yellow]")
         logger.error("Cache download failed")
+        sys.exit(1)
+
+    if not ensure_vector_data_available():
+        console.print("[bold red]❌ Failed to download vector data![/bold red]")
+        console.print("[yellow]Please check your internet connection and try again.[/yellow]")
+        logger.error("Vector data download failed")
         sys.exit(1)
 
     with console.status(
@@ -183,7 +204,11 @@ def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> T
 
 def _create_runner(app: App) -> tuple[Runner, DatabaseSessionService]:
     """Create the DatabaseSessionService and Runner."""
-    db_url = "sqlite+aiosqlite:///investor_agent/data/investor_agent_sessions.db"
+    # Use Path to find the data directory relative to the investor_agent package
+    from pathlib import Path
+    data_dir = Path(__file__).parent / "investor_agent" / "data"
+    db_path = data_dir / "investor_agent_sessions.db"
+    db_url = f"sqlite+aiosqlite:///{db_path}"
     logger.info("Setting up session service with database: %s", db_url)
     session_service = DatabaseSessionService(db_url=db_url)
     runner = Runner(app=app, session_service=session_service)

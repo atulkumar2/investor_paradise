@@ -5,13 +5,28 @@ import logging
 import os
 import sys
 
+# Fix Windows console encoding for Unicode characters (emojis, etc.)
+if sys.platform == "win32":
+    try:
+        # Reconfigure stdout/stderr to use UTF-8 encoding
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except (AttributeError, io.UnsupportedOperation):
+        # Python < 3.7 or if reconfigure is not available
+        import codecs
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+
 _LOG_FILE = "investor_agent.log"
 
 # Clean up any previous logs
 for log_file in ["web.log", "tunnel.log"]:
     if os.path.exists(log_file):
         os.remove(log_file)
-        print(f"🧹 Cleaned up {log_file}")
+        try:
+            print(f"🧹 Cleaned up {log_file}")
+        except UnicodeEncodeError:
+            print(f"[CLEAN] {log_file}")
 
 # Configure root logging to write to the log file if not already configured.
 if not logging.getLogger().handlers:
@@ -67,4 +82,8 @@ def get_logger(name: str):
     return logger
 
 
-print("✅ Logging configured")
+# Use ASCII-safe print for Windows compatibility
+try:
+    print("✅ Logging configured")
+except UnicodeEncodeError:
+    print("[OK] Logging configured")
