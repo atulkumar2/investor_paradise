@@ -151,7 +151,20 @@ exit    # Save and exit (history preserved)
 ```
 
 ### ⚡ Performance Optimizations
-- **Parquet caching**: 13x faster data loading (5s → 0.4s for 1M+ rows)
+#### Parquet Caching System
+
+- **Faster data loading**: Optimized with Parquet format for 1M+ rows
+- **Automatic cache generation**: Downloads from GitHub releases on first run
+- **4 cache files**:
+  - `combined_data.parquet` (49MB): Stock price data
+  - `nse_indices_cache.parquet` (44KB): Index constituents (NIFTY50, NIFTYBANK, etc.)
+  - `nse_sector_cache.parquet` (22KB): Sector mappings (2,050+ stocks, 31 sectors)
+  - `nse_symbol_company_mapping.parquet` (89KB): Symbol→Company name lookup
+- **Cache refresh**: Use `--refresh-cache` flag to download latest data from GitHub
+- **Offline-ready**: Cache files work without CSV source data
+
+#### Runtime Optimizations
+
 - **Lazy loading**: Models instantiated only when needed
 - **Parallel news agents**: PDF + web search run concurrently
 - **Streaming responses**: Progressive output display for better UX (CLI)
