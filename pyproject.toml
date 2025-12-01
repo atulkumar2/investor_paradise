@@ -15,6 +15,7 @@ authors = [
 ]
 keywords = ["stocks", "nse", "analysis", "ai", "gemini", "trading", "investment"]
 dependencies = [
+    "google-adk[eval] @ git+https://github.com/google/adk-python/",
     "google-genai",
     "pandas",
     "python-dotenv",
