@@ -45,11 +45,11 @@ The information, analysis, recommendations, and trading strategies provided by *
   - [2. Install Dependencies with `uv`](#2-install-dependencies-with-uv)
   - [3. Configure API Key](#3-configure-api-key)
   - [4. Data Setup (Automatic)](#4-data-setup-automatic)
-- [📦 Installation from PyPI](#📦-installation-from-pypi)
+- [Installation from PyPI](#installation-from-pypi)
 - [Running the Agent](#running-the-agent)
   - [Option 1: Web UI (ADK Web)](#option-1-web-ui-adk-web)
   - [Option 2: Command Line (CLI)](#option-2-command-line-cli)
-  - [Option 3: 🐳 Docker Deployment](#option-3-🐳-docker-deployment)
+  - [Option 3: Docker Deployment](#option-3-🐳-docker-deployment)
 - [Sample Questions](#sample-questions)
 - [Troubleshooting](#troubleshooting)
 - [Project Structure](#project-structure)
@@ -186,6 +186,7 @@ exit    # Save and exit (history preserved)
 ### 💾 Performance Optimizations & Caching
 
 #### Parquet Caching System
+
 - **Faster data loading**: Optimized with Parquet format for 1M+ rows
 - **Automatic cache generation**: Downloads from GitHub releases on first run
 - **4 cache files**:
@@ -197,6 +198,7 @@ exit    # Save and exit (history preserved)
 - **Offline-ready**: Cache files work without CSV source data
 
 #### Runtime Optimizations
+
 - **Lazy loading**: Models instantiated only when needed
 - **Parallel news agents**: PDF + web search run concurrently
 - **Streaming responses**: Progressive output display for better UX (CLI)
@@ -286,6 +288,7 @@ You can access Investor Paradise on multiple platforms:
 All methods use the same agent pipeline, data, and session management—choose based on your workflow and infrastructure.
 
 **Repositories**:
+
 - **Main Codebase**: [https://github.com/atulkumar2/investor_paradise](https://github.com/atulkumar2/investor_paradise)
 - **NSE Data**: [https://github.com/atulkumar2/investor_agent_data](https://github.com/atulkumar2/investor_agent_data)
 
@@ -340,6 +343,7 @@ uv run cli.py
 ```
 
 **Your API key is stored securely:**
+
 - **macOS**: Keychain Access
 - **Windows**: Windows Credential Locker
 - **Linux**: Secret Service (gnome-keyring/KWallet)
@@ -389,22 +393,43 @@ uv run cli.py
 # ✅ All cache files downloaded successfully!
 ```
 
-**What gets downloaded:**
+**What gets downloaded (from GitHub releases):**
+
 - **combined_data.parquet** (49MB): Historical stock price data (2019-2025)
+  - Release: [nsedata_parquet_20251128](https://github.com/atulkumar2/investor_agent_data/releases/tag/nsedata_parquet_20251128)
+  - Direct: [combined_data.parquet](https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/combined_data.parquet)
 - **nse_indices_cache.parquet** (44KB): Index constituents (NIFTY 50, BANK, IT, etc.)
+  - Direct: [nse_indices_cache.parquet](https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_indices_cache.parquet)
 - **nse_sector_cache.parquet** (22KB): Sector mappings (2,050+ stocks, 31 sectors)
+  - Direct: [nse_sector_cache.parquet](https://github.com/atulkumar2/investor_agent_data/releases/download/nsedata_parquet_20251128/nse_sector_cache.parquet)
 - **nse_symbol_company_mapping.parquet** (89KB): Symbol→Company name lookup
+  - Support data release (ZIP): [nse_support_data_20251128](https://github.com/atulkumar2/investor_agent_data/releases/tag/nse_support_data_20251128)
+  - Direct ZIP download: [nse_support_data_20251128.zip](https://github.com/atulkumar2/investor_agent_data/releases/download/nse_support_data_20251128/nse_support_data_20251128.zip)
+
+**News PDF data (Economic Times archives via GitHub releases):**
+
+- **2025-11 (latest batch)**:
+  - [newsdata_202511](https://github.com/atulkumar2/investoragentdata_news1/releases/tag/newsdata_202511)
+- **2025-06 to 2025-08**:
+  - [newsdata_202506_202508](https://github.com/atulkumar2/investoragentdata_news1/releases/tag/newsdata_202506_202508)
+- **2025-03 to 2025-05**:
+  - [newsdata_202503_202505](https://github.com/sujeet-ssv/investoragentdata_news1/releases/tag/newsdata_202503_202505)
+- **2024-07 to 2024-08**:
+  - [newsdata_202407_202408](https://github.com/sujeet-ssv/investoragentdata_news1/releases/tag/newsdata_202407_202408)
+- **2024-09 to 2024-11**:
+  - [newsdata_202409_202411](https://github.com/sujeet-ssv/investoragentdata_news1/releases/tag/newsdata_202409_202411)
 
 **Cache location**: `investor_agent/data/cache/`
 
 **To refresh data** (downloads latest from GitHub):
+
 ```bash
 uv run cli.py --refresh-cache
 ```
 
 ---
 
-## 📦 Installation from PyPI
+## Installation from PyPI
 
 You can install Investor Paradise CLI as a package without cloning the repository.
 
@@ -427,6 +452,7 @@ investor-paradise-cli
 ```
 
 **What you get:**
+
 - ✅ No repository cloning needed
 - ✅ Global CLI access from any directory
 - ✅ Automatic data downloads on first run
@@ -511,8 +537,7 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 4. Tracks tokens/cost and saves session to SQLite database
 5. Session persists—resume anytime by selecting from session list
 
-
-### Option 3: 🐳 Docker Deployment
+### Option 3: Docker Deployment
 
 #### Quick Start with Docker
 
@@ -521,8 +546,6 @@ uv run cli.py "Compare TCS, INFY, and WIPRO on risk metrics"
 ```bash
 docker build -t investor-paradise:latest .
 ```
-
-
 
 **3. Run with Docker CLI:**
 
@@ -540,8 +563,6 @@ docker run --rm -it -e GOOGLE_API_KEY="your_api_key" investor-paradise cli
 |----------|----------|---------|-------------|
 | `GOOGLE_API_KEY` | ✅ Yes | - | Your Google AI API key |
 | `SESSION_CLEANUP_DAYS` | ❌ No | 7 | Delete sessions older than N days |
-
-
 
 #### Container Logs
 
@@ -599,14 +620,16 @@ For production environments:
 ### Cache Download Issues
 
 **Problem**: Cache files fail to download from GitHub releases  
-**Solution**: 
+**Solution**:
+
 - Check your internet connection
 - Verify GitHub is accessible from your network
 - If behind a corporate firewall, you may need to configure proxy settings
 - Try manually downloading cache files from [investor_agent_data releases](https://github.com/atulkumar2/investor_agent_data/releases)
 
 **Problem**: "Cache files not found" error  
-**Solution**: 
+**Solution**:
+
 - Run `uv run cli.py --refresh-cache` to force re-download
 - Ensure you have write permissions to `investor_agent/data/cache/` directory
 - Check if cache files exist in `investor_agent/data/cache/` (should see 4 `.parquet` files)
@@ -902,6 +925,7 @@ adk eval investor_agent evaluations/integration.evalset.json \
 For detailed evaluation setup, custom test creation, and CI/CD integration:
 
 **👉 See [evaluations/README.md](evaluations/README.md)** for:
+
 - Complete test suite documentation
 - How to run evaluations
 - Adding new test cases
@@ -912,6 +936,7 @@ For detailed evaluation setup, custom test creation, and CI/CD integration:
 ### ✅ Quality Gates
 
 **Minimum passing criteria for production:**
+
 - ✅ All integration tests pass (12/12)
 - ✅ Tool trajectory avg ≥ 0.85
 - ✅ Response match avg ≥ 0.70
