@@ -4,7 +4,7 @@ Comprehensive evaluation framework for the Investor Paradise ADK agent using Goo
 
 ## 📁 Directory Structure
 
-```
+```bash
 evaluations/
 ├── test_config.json           # Evaluation criteria & thresholds
 ├── integration.evalset.json   # 12 fixed integration test cases
@@ -17,22 +17,27 @@ evaluations/
 
 ### Integration Tests (5 test cases) ⭐ **RECOMMENDED**
 
-**Basic Capabilities (2 tests)**
+#### **Basic Capabilities (2 tests)**
+
 - ✅ `test_01_greeting` - Agent greets user warmly
 - ✅ `test_02_capability_query` - Agent explains capabilities
 
-**Data Queries (1 test)**
+#### **Data Queries (1 test)**
+
 - ✅ `test_03_automobile_sector_list` - List all Automobile sector stocks
 
-**Analysis Pipeline (1 test)**
+#### **Analysis Pipeline (1 test)**
+
 - ✅ `test_04_bhartiartl_analysis` - Full stock analysis with news & recommendations
 
-**Security (1 test)**
+#### **Security (1 test)**
+
 - ✅ `test_05_prompt_injection_security` - Rejects prompt injection attempts
 
 ### User Simulation Tests (1 scenario) 🔬 **OPTIONAL**
 
-**Simple Conversation**
+#### **Simple Conversation**
+
 1. **Banking Stocks Query** - User asks for banking stocks → Agent lists them → User thanks
 
 > **Note:** User simulations test conversational flow without assertions. Integration tests provide better coverage with specific pass/fail criteria.
@@ -42,11 +47,13 @@ evaluations/
 ### Prerequisites
 
 1. **Install ADK** (if not already installed):
+
    ```bash
    pip install google-adk
    ```
 
 2. **Set up environment**:
+
    ```bash
    export GOOGLE_API_KEY="your-api-key-here"
    ```
@@ -64,6 +71,7 @@ adk eval investor_agent evaluations/integration.evalset.json \
 ```
 
 **Expected output:**
+
 - Pass/Fail status for each test case
 - Tool trajectory scores (should be ≥ 0.85)
 - Response match scores (should be ≥ 0.70)
@@ -71,19 +79,22 @@ adk eval investor_agent evaluations/integration.evalset.json \
 
 ### Run User Simulation Tests
 
-**Step 1: Create eval set**
+#### **Step 1: Create eval set**
+
 ```bash
 adk eval_set create investor_agent eval_user_simulation
 ```
 
-**Step 2: Add scenarios**
+#### **Step 2: Add scenarios**
+
 ```bash
 adk eval_set add_eval_case investor_agent eval_user_simulation \
   --scenarios_file=evaluations/user_simulation.json \
   --session_input_file=evaluations/session_input.json
 ```
 
-**Step 3: Run evaluation**
+#### **Step 3: Run evaluation**
+
 ```bash
 adk eval investor_agent eval_user_simulation \
   --config_file_path=evaluations/test_config.json \
@@ -113,22 +124,26 @@ adk eval investor_agent eval_user_simulation \
 ## 📊 Evaluation Metrics
 
 ### Tool Trajectory Score (threshold: 0.85)
+
 - Measures whether the agent uses the **correct tools** with **correct parameters**
 - Checks the sequence of tool calls against expected behavior
 - Score of 1.0 = perfect tool usage, 0.0 = wrong tools/parameters
 
 **What it validates:**
+
 - ✅ EntryRouter calls `get_index_constituents` for "What stocks are in NIFTY 50?"
 - ✅ MarketAnalyst calls `check_data_availability` before analysis
 - ✅ MarketAnalyst uses `get_top_gainers` for "top gainers this week"
 - ✅ NewsIntelligence uses both `semantic_search` (PDF) and `google_search` (Web)
 
 ### Response Match Score (threshold: 0.70)
+
 - Measures how **similar** the agent's response is to the expected response
 - Uses text similarity algorithms to compare content
 - Score of 1.0 = perfect match, 0.0 = completely different
 
 **What it validates:**
+
 - ✅ Response structure and formatting
 - ✅ Key information presence (stock symbols, metrics, recommendations)
 - ✅ Tone and communication style
@@ -137,16 +152,19 @@ adk eval investor_agent eval_user_simulation \
 ## 🔍 Interpreting Results
 
 ### ✅ Success (PASS)
-```
+
+```bash
 ✅ test_08_top_gainers_full_pipeline: PASS
    Tool Trajectory: 1.0/0.85
    Response Match: 0.82/0.70
 ```
+
 - Both scores meet thresholds
 - Agent behavior matches expected pattern
 
 ### ❌ Failure (FAIL)
-```
+
+```bash
 ❌ test_05_nifty50_constituents: FAIL
    Tool Trajectory: 0.95/0.85 ✅
    Response Match: 0.65/0.70 ❌
@@ -155,17 +173,20 @@ adk eval investor_agent eval_user_simulation \
    Expected: "📋 NIFTY 50 Index Constituents (50 stocks)..."
    Actual:   "Here are the NIFTY 50 stocks: RELIANCE, TCS..."
 ```
+
 - Tool usage correct but response formatting different
 - Need to adjust prompt or update expected response
 
 ### 🔧 Common Issues
 
 **Tool Trajectory Failures:**
+
 - Agent using wrong tools (e.g., `analyze_stock` instead of `get_top_gainers`)
 - Missing tool calls (e.g., forgot `check_data_availability`)
 - Wrong parameters (e.g., wrong sector name mapping)
 
 **Response Match Failures:**
+
 - Different formatting (bullet points vs comma-separated)
 - Missing follow-up prompts
 - Different tone or phrasing
@@ -176,12 +197,14 @@ adk eval investor_agent eval_user_simulation \
 ### When to Run Evaluations
 
 **Always run before:**
+
 - Merging prompt changes
 - Updating tool definitions
 - Changing model versions (e.g., Flash → Pro)
 - Production deployments
 
 **Good practices:**
+
 1. **Baseline**: Run full suite on stable version, save results
 2. **Compare**: Run suite after changes, compare scores
 3. **Investigate**: Any score drop > 5% requires investigation
@@ -191,6 +214,7 @@ adk eval investor_agent eval_user_simulation \
 ### Continuous Integration
 
 Add to your CI/CD pipeline:
+
 ```yaml
 # Example GitHub Actions
 - name: Run ADK Evaluations
@@ -205,6 +229,7 @@ Add to your CI/CD pipeline:
 ### Adding New Integration Test Cases
 
 Edit `integration.evalset.json`:
+
 ```json
 {
   "eval_id": "test_13_custom_test",
@@ -229,6 +254,7 @@ Edit `integration.evalset.json`:
 ### Adding New User Simulation Scenarios
 
 Edit `user_simulation.json`:
+
 ```json
 {
   "starting_prompt": "Initial user message",
@@ -239,6 +265,7 @@ Edit `user_simulation.json`:
 ### Adjusting Thresholds
 
 Edit `test_config.json`:
+
 ```json
 {
   "criteria": {
@@ -272,6 +299,7 @@ Use ADK Web UI to create test cases from real sessions:
 ## 🎯 Quality Gates
 
 **Minimum passing criteria for production:**
+
 - ✅ All integration tests pass (12/12)
 - ✅ User simulation success rate ≥ 80% (5/6)
 - ✅ Tool trajectory avg ≥ 0.85
@@ -287,29 +315,34 @@ Use ADK Web UI to create test cases from real sessions:
 
 ## 🐛 Troubleshooting
 
-**"No module named 'google.adk'"**
+### **"No module named 'google.adk'"**
+
 ```bash
 pip install google-adk
 ```
 
-**"GOOGLE_API_KEY not found"**
+### **"GOOGLE_API_KEY not found"**
+
 ```bash
 export GOOGLE_API_KEY="your-api-key"
 ```
 
-**"Agent not found: investor_agent"**
+### **"Agent not found: investor_agent"**
+
 ```bash
 # Make sure you're in the project root directory
 cd /path/to/investor_paradise
 ```
 
-**"Data not loaded" errors**
+### **"Data not loaded" errors**
+
 ```bash
 # Pre-load data cache
 python -c "from investor_agent.data_engine import NSESTORE; print(len(NSESTORE.df))"
 ```
 
-**QPM (Queries Per Minute) limit errors**
+### **QPM (Queries Per Minute) limit errors**
+
 - Run tests sequentially, not in parallel
 - Add delays between test runs
 - Use Flash-Lite model for faster quota recovery

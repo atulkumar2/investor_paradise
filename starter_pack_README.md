@@ -7,7 +7,7 @@ Agent generated with [`googleCloudPlatform/agent-starter-pack`](https://github.c
 
 This project is organized as follows:
 
-```
+```bash
 investor-paradise/
 ├── investor_agent/                 # Core application code
 │   ├── agent.py         # Main agent logic
@@ -27,11 +27,11 @@ investor-paradise/
 ## Requirements
 
 Before you begin, ensure you have:
+
 - **uv**: Python package manager (used for all dependency management in this project) - [Install](https://docs.astral.sh/uv/getting-started/installation/) ([add packages](https://docs.astral.sh/uv/concepts/dependencies/) with `uv add <package>`)
 - **Google Cloud SDK**: For GCP services - [Install](https://cloud.google.com/sdk/docs/install)
 - **Terraform**: For infrastructure deployment - [Install](https://developer.hashicorp.com/terraform/downloads)
 - **make**: Build automation tool - [Install](https://www.gnu.org/software/make/) (pre-installed on most Unix-based systems)
-
 
 ## Quick Start (Local Testing)
 
@@ -40,6 +40,7 @@ Install required packages and launch the local development environment:
 ```bash
 make install && make playground
 ```
+
 > **📊 Observability Note:** Agent telemetry (Cloud Trace) is always enabled. Prompt-response logging (GCS, BigQuery, Cloud Logging) is **disabled** locally, **enabled by default** in deployed environments (metadata only - no prompts/responses). See [Monitoring and Observability](#monitoring-and-observability) for details.
 
 ## Commands
@@ -56,7 +57,6 @@ make install && make playground
 
 For full command options and usage, refer to the [Makefile](Makefile).
 
-
 ## Usage
 
 This template follows a "bring your own agent" approach - you focus on your business logic, and the template handles everything else (UI, infrastructure, deployment, monitoring).
@@ -68,7 +68,6 @@ This template follows a "bring your own agent" approach - you focus on your busi
 5. **Monitor:** Track performance and gather insights using BigQuery telemetry data, Cloud Logging, and Cloud Trace to iterate on your application.
 
 The project includes a `GEMINI.md` file that provides context for AI tools like Gemini CLI when asking questions about your template.
-
 
 ## Deployment
 
@@ -83,7 +82,6 @@ gcloud config set project <your-dev-project-id>
 make deploy
 ```
 
-
 The repository includes a Terraform configuration for the setup of the Dev Google Cloud project.
 See [deployment/README.md](deployment/README.md) for instructions.
 
@@ -95,11 +93,13 @@ The repository includes a Terraform configuration for the setup of a production 
 
 The application provides two levels of observability:
 
-**1. Agent Telemetry Events (Always Enabled)**
+### **1. Agent Telemetry Events (Always Enabled)**
+
 - OpenTelemetry traces and spans exported to **Cloud Trace**
 - Tracks agent execution, latency, and system metrics
 
-**2. Prompt-Response Logging (Configurable)**
+### **2. Prompt-Response Logging (Configurable)**
+
 - GenAI instrumentation captures LLM interactions (tokens, model, timing)
 - Exported to **Google Cloud Storage** (JSONL), **BigQuery** (external tables), and **Cloud Logging** (dedicated bucket)
 
