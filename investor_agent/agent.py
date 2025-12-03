@@ -116,7 +116,7 @@ root_agent = create_pipeline(
     entry_model=lite_model,        # Flash-Lite for Entry (simple classification)
     market_model=flash_model, # Flash for Market (complex analysis with tools)
     news_model=lite_model,         # Flash-Lite for News (simple google search)
-    merger_model=pro_model   # Pro for Merger (report synthesis)
+    merger_model=flash_model   # Pro for Merger (report synthesis)
 )
 
 # Override root_agent's module path to fix ADK path detection issue
@@ -140,4 +140,4 @@ logger.info("   Compaction: interval=3 invocations, overlap_size=1 turn")
 # Export root_agent for ADK eval to find
 # (Already defined above at line ~122, just making it explicit here)
 agent = root_agent  # ADK eval looks for either 'agent' or 'root_agent'
-agent.__module__ = "investor_agent.agent"  # Fix module path for ADK eval
+# agent.__module__ = "investor_agent.agent"  # Fix module path for ADK eval
