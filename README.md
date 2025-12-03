@@ -49,7 +49,7 @@ The information, analysis, recommendations, and trading strategies provided by *
 - [Running the Agent](#running-the-agent)
   - [Option 1: Web UI (ADK Web)](#option-1-web-ui-adk-web)
   - [Option 2: Command Line (CLI)](#option-2-command-line-cli)
-  - [Option 3: Docker Deployment](#option-3-🐳-docker-deployment)
+  - [Option 3: Docker Deployment](#option-3-docker-deployment)
   - [Option 4: Google Cloud Deployment (Vertex AI)](#option-4-️-google-cloud-deployment-vertex-ai-agent-engine)
 - [Sample Questions](#sample-questions)
 - [Troubleshooting](#troubleshooting)
@@ -471,6 +471,7 @@ investor-paradise-cli
 **Best for**: Interactive exploration, multi-turn conversations, visual analysis
 
 > **Note for Local Clones**: If you cloned this repo and are running ADK web for the first time, you need to download data files first:
+
 > ```bash
 > # One-time setup: Download required data files (~50MB)
 > python setup_data.py
@@ -478,7 +479,7 @@ investor-paradise-cli
 > # Then start the web server
 > adk web . --log_level INFO
 > ```
-> 
+>
 > The CLI automatically handles data downloads, so `setup_data.py` is only needed for ADK web usage.
 
 ```bash
@@ -641,7 +642,7 @@ We've successfully deployed **Investor Paradise** to Google Cloud's **Vertex AI 
 
 #### 📦 Deployment Architecture
 
-```
+```bash
 investor_paradise/
 ├── investor_agent/          # Packaged and deployed to Cloud Run
 │   ├── agent.py            # Auto-detects cloud env (K_SERVICE variable)
@@ -654,6 +655,7 @@ investor_paradise/
 ```
 
 **Smart Environment Detection**: The agent automatically detects deployment environment:
+
 - **Cloud**: Uses ADC (Application Default Credentials), downloads data from GCS
 - **Local**: Uses API key, downloads data from GitHub releases
 
@@ -665,6 +667,7 @@ investor_paradise/
    - Supports both cache data (49MB parquet) and vector data (news embeddings)
 
 2. **Configuration**:
+
    ```yaml
    # deployment/agent_engine_config.yaml
    agent_engine:
@@ -675,6 +678,7 @@ investor_paradise/
    ```
 
 3. **Deployment Command**:
+
    ```bash
    # Using agent-starter-pack
    make backend
@@ -1081,8 +1085,6 @@ This project is licensed under the MIT License—see LICENSE file for details.
 - **Google ADK** for multi-agent framework
 - **NSE India** for market data
 - **Gemini AI** for language models
-
-
 
 ## Support
 

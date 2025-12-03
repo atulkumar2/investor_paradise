@@ -12,21 +12,25 @@ This guide explains how to install and use Investor Paradise CLI from PyPI using
 `uv` is a fast Python package installer and resolver written in Rust.
 
 **macOS/Linux:**
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 **Windows:**
+
 ```powershell
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 **Alternative (using pip):**
+
 ```bash
 pip install uv
 ```
 
 Verify installation:
+
 ```bash
 uv --version
 ```
@@ -40,6 +44,7 @@ uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
 ```
 
 This will:
+
 - Clone and install Google ADK from GitHub
 - Set up all required dependencies
 
@@ -52,12 +57,14 @@ uv tool install investor-paradise-cli
 ```
 
 This is the easiest method:
+
 - Installs the CLI globally in an isolated environment
 - Automatically adds to PATH (accessible from anywhere)
 - No need to activate virtual environments
 - Just run `investor-paradise-cli` from any directory
 
 **From GitHub (Latest Development):**
+
 ```bash
 uv tool install git+https://github.com/atulkumar2/investor_paradise.git
 ```
@@ -69,11 +76,13 @@ uv pip install investor-paradise-cli
 ```
 
 **From TestPyPI (Development/Testing):**
+
 ```bash
 uv pip install --index-url https://test.pypi.org/simple/ investor-paradise-cli
 ```
 
 **From GitHub (Latest Development):**
+
 ```bash
 uv pip install git+https://github.com/atulkumar2/investor_paradise.git
 ```
@@ -83,6 +92,7 @@ uv pip install git+https://github.com/atulkumar2/investor_paradise.git
 **Note:** This method requires you to be in a project directory with `pyproject.toml`.
 
 First, create a project:
+
 ```bash
 # Create a new directory for your analysis work
 mkdir my-stock-analysis
@@ -93,6 +103,7 @@ uv init
 ```
 
 Then add the dependencies:
+
 ```bash
 # Add Google ADK
 uv add "google-adk @ git+https://github.com/google/adk-python/"
@@ -102,6 +113,7 @@ uv add investor-paradise-cli
 ```
 
 This automatically:
+
 - Installs the package in your project
 - Updates `pyproject.toml` with the dependency
 - Resolves and locks dependencies in `uv.lock`
@@ -115,6 +127,7 @@ If you used `uv pip install` and want to run `investor-paradise-cli` from anywhe
 ### Manual PATH Setup
 
 **macOS/Linux (bash):**
+
 ```bash
 # Add to ~/.bashrc or ~/.bash_profile
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
@@ -122,6 +135,7 @@ source ~/.bashrc
 ```
 
 **macOS (zsh):**
+
 ```bash
 # Add to ~/.zshrc
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
@@ -129,6 +143,7 @@ source ~/.zshrc
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 # Add to PowerShell profile
 $profilePath = $PROFILE
@@ -139,6 +154,7 @@ Add-Content -Path $profilePath -Value '$env:PATH += ";$env:USERPROFILE\.local\bi
 ```
 
 **Windows (Command Prompt):**
+
 1. Open System Properties → Environment Variables
 2. Under User Variables, find `Path`
 3. Click Edit → New
@@ -146,6 +162,7 @@ Add-Content -Path $profilePath -Value '$env:PATH += ";$env:USERPROFILE\.local\bi
 5. Click OK to save
 
 After adding to PATH, verify:
+
 ```bash
 which investor-paradise-cli  # macOS/Linux
 where investor-paradise-cli  # Windows
@@ -164,6 +181,7 @@ investor-paradise-cli
 ```
 
 The CLI will:
+
 1. Detect that no API key is configured
 2. Prompt you to enter your Google API key
 3. Securely store it in your system's credential manager:
@@ -176,16 +194,19 @@ You only need to do this once - the key will be remembered for future sessions.
 ### Option 2: Environment Variable
 
 **macOS/Linux:**
+
 ```bash
 export GOOGLE_API_KEY="your_google_api_key_here"
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 $env:GOOGLE_API_KEY="your_google_api_key_here"
 ```
 
 **Windows (Command Prompt):**
+
 ```cmd
 set GOOGLE_API_KEY=your_google_api_key_here
 ```
@@ -193,6 +214,7 @@ set GOOGLE_API_KEY=your_google_api_key_here
 ### Option 3: .env File
 
 Create a `.env` file in your working directory:
+
 ```bash
 echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
 ```
@@ -202,6 +224,7 @@ echo "GOOGLE_API_KEY=your_google_api_key_here" > .env
 ### If Using Method 1 (`uv tool install`)
 
 Simply run from anywhere:
+
 ```bash
 investor-paradise-cli
 ```
@@ -213,6 +236,7 @@ investor-paradise-cli
 ```
 
 Or with uv:
+
 ```bash
 uv run investor-paradise-cli
 ```
@@ -220,6 +244,7 @@ uv run investor-paradise-cli
 ### If Using Method 3 (Project setup with `uv add`)
 
 From your project directory:
+
 ```bash
 uv run investor-paradise-cli
 ```
@@ -237,6 +262,7 @@ On the first launch, the CLI will:
 5. **Ready!** Start asking questions
 
 **Example First Run:**
+
 ```
 🚀 Initializing Investor Paradise...
 
@@ -330,6 +356,7 @@ uv run investor-paradise-cli
 ```
 
 This approach:
+
 - Creates isolated environment per project
 - Manages dependencies in `pyproject.toml`
 - Locks versions in `uv.lock` for reproducibility
@@ -355,6 +382,7 @@ asyncio.run(analyze_stock())
 ```
 
 Run with uv:
+
 ```bash
 uv run analyze.py
 ```
@@ -362,6 +390,7 @@ uv run analyze.py
 ## Data Storage Locations
 
 By default, data is stored in:
+
 ```
 <project-root>/
 └── investor_agent/
@@ -443,6 +472,7 @@ That's it! The CLI will guide you through API key setup and data downloads on fi
 **Problem:** `uv: command not found`
 
 **Solution:**
+
 ```bash
 # Reload your shell configuration
 source ~/.bashrc  # or ~/.zshrc on macOS
@@ -456,6 +486,7 @@ pip install uv
 **Problem:** Installation fails with dependency conflicts
 
 **Solution:**
+
 ```bash
 # Use fresh virtual environment
 uv venv --python 3.11
@@ -467,6 +498,7 @@ uv pip install investor-paradise-cli
 **Problem:** Google ADK not found
 
 **Solution:**
+
 ```bash
 # Make sure to install Google ADK first (it's a pre-requisite)
 uv add "google-adk[eval] @ git+https://github.com/google/adk-python/"
@@ -479,6 +511,7 @@ uv add investor-paradise-cli
 **Problem:** "GOOGLE_API_KEY not found" error
 
 **Solution:**
+
 1. Run with `--reset-api-key` flag to re-enter your key
 2. Or set environment variable before running
 
@@ -492,6 +525,7 @@ uv run investor-paradise-cli
 **Problem:** Download fails or times out
 
 **Solution:**
+
 ```bash
 # Retry with refresh flag
 uv run investor-paradise-cli --refresh-cache
@@ -505,6 +539,7 @@ uv run investor-paradise-cli --download-vector-data
 **Problem:** CLI is slow or unresponsive
 
 **Solutions:**
+
 - First query is always slower (data loads into memory)
 - Ensure you have at least 2GB free RAM
 - Check internet connection for API calls
