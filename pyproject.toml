@@ -16,6 +16,7 @@ authors = [
 keywords = ["stocks", "nse", "analysis", "ai", "gemini", "trading", "investment"]
 dependencies = [
     "google-adk[eval] @ git+https://github.com/google/adk-python/",
+    "google-cloud-storage",
     "google-genai",
     "pandas",
     "python-dotenv",
@@ -42,7 +43,7 @@ Issues = "https://github.com/atulkumar2/investor_paradise/issues"
 
 [tool.setuptools]
 packages = ["investor_agent", "investor_agent.prompts", "investor_agent.tools"]
-py-modules = ["cli", "cli_helpers", "spinner", "download_nse_data", "cache_manager"]
+py-modules = ["cli", "cli_helpers", "spinner", "download_nse_data"]
 
 [tool.ruff]
 line-length = 100
@@ -55,3 +56,6 @@ select = ["E", "F", "I"]
 [tool.black]
 line-length = 100
 target-version = ["py311"]
+
+[tool.uv.sources]
+google-adk = { git = "https://github.com/google/adk-python" }

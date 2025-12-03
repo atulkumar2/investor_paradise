@@ -19,11 +19,6 @@ from google.genai import types
 from rich.markdown import Markdown
 from rich.panel import Panel
 
-from cache_manager import (
-    ensure_cache_available,
-    ensure_vector_data_available,
-    refresh_cache,
-)
 from cli_helpers import (
     AgentProgressTracker,
     TokenTracker,
@@ -35,6 +30,11 @@ from investor_agent.api_key_manager import (
     get_or_prompt_api_key,
     reset_api_key,
     show_help,
+)
+from investor_agent.cache_manager import (
+    ensure_cache_available,
+    ensure_vector_data_available,
+    refresh_cache,
 )
 from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
@@ -101,13 +101,13 @@ def _get_api_key() -> str | None:
 def _initialize_data() -> None:
     """Load NSE data and log basic context."""
     # Display ASCII art logo (embedded directly to avoid packaging issues)
-    logo = """ _____                    _              ______                   _ _           
-│_   _│                  │ │             │ ___ ╲                 │ (_)          
-  │ │ _ ____   _____  ___│ │_ ___  _ __  │ │_╱ ╱_ _ _ __ __ _  __│ │_ ___  ___  
-  │ ││ '_ ╲ ╲ ╱ ╱ _ ╲╱ __│ __╱ _ ╲│ '__│ │  __╱ _` │ '__╱ _` │╱ _` │ ╱ __│╱ _ ╲ 
- _│ ││ │ │ ╲ V ╱  __╱╲__ ╲ ││ (_) │ │    │ │ │ (_│ │ │ │ (_│ │ (_│ │ ╲__ ╲  __╱ 
- ╲___╱_│ │_│╲_╱ ╲___││___╱╲__╲___╱│_│    ╲_│  ╲__,_│_│  ╲__,_│╲__,_│_│___╱╲___│ 
-                                                                                
+    logo = """ _____                    _              ______                   _ _
+│_   _│                  │ │             │ ___ ╲                 │ (_)
+  │ │ _ ____   _____  ___│ │_ ___  _ __  │ │_╱ ╱_ _ _ __ __ _  __│ │_ ___  ___
+  │ ││ '_ ╲ ╲ ╱ ╱ _ ╲╱ __│ __╱ _ ╲│ '__│ │  __╱ _` │ '__╱ _` │╱ _` │ ╱ __│╱ _ ╲
+ _│ ││ │ │ ╲ V ╱  __╱╲__ ╲ ││ (_) │ │    │ │ │ (_│ │ │ │ (_│ │ (_│ │ ╲__ ╲  __╱
+ ╲___╱_│ │_│╲_╱ ╲___││___╱╲__╲___╱│_│    ╲_│  ╲__,_│_│  ╲__,_│╲__,_│_│___╱╲___│
+
                     Your AI-Powered NSE Stock Market Intelligence Platform 📊
                         Data-Driven Insights • News Intelligence • Smart Analysis
 """
@@ -119,7 +119,7 @@ def _initialize_data() -> None:
     # Ensure cache files and vector data are available (download if missing)
     console.print("\n[bold blue]📦 Checking if latest market data parquet cache and Economic Times news vector data is available...[/bold blue]")
     logger.info("Checking data availability")
-    
+
     if not ensure_cache_available():
         console.print("[bold red]❌ Failed to download cache files![/bold red]")
         console.print("[yellow]Please check your internet connection and try again.[/yellow]")

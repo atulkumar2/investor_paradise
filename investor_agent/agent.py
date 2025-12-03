@@ -8,6 +8,13 @@ from google.adk.models.google_llm import Gemini
 from google.genai import types
 
 from investor_agent import tools
+
+# Import cache management functions
+from investor_agent.cache_manager import (
+    check_data_exists,
+    download_all_data_from_gcs,
+    download_all_data_from_github,
+)
 from investor_agent.data_engine import NSESTORE
 from investor_agent.logger import get_logger
 from investor_agent.sub_agents import create_pipeline
@@ -18,17 +25,45 @@ logger = get_logger(__name__)
 # --- 2. Load Config, logging & Data ---
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if not GOOGLE_API_KEY:
+
+# Detect deployment environment
+is_vertex_deployment = os.getenv("K_SERVICE") is not None  # Cloud Run sets this env var
+
+if not is_vertex_deployment and not GOOGLE_API_KEY:
     raise ValueError("❌ GOOGLE_API_KEY not found. Check .env file.")
 
 logger.info("🚀 Initializing Web App Backend...")
+logger.info("   Environment: %s", "Vertex AI Cloud" if is_vertex_deployment else "Local Development")
 
-# --- CRITICAL: Pre-load Data (Eager Loading - Option 1) ---
-# This MUST happen before agent creation to ensure:
-# 1. First user query is instant (no 5s CSV load delay)
-# 2. Uses parquet cache if available (13x faster than CSV)
-# 3. ADK web server is ready immediately after startup
-logger.info("📂 Pre-loading NSE stock data...")
+# --- CRITICAL: Ensure Complete Data Availability (Before Agent Creation) ---
+# All-or-nothing strategy: Check if BOTH cache AND vector data exist
+#   - If either is missing: Delete entire data folder and re-download everything
+#   - Cloud deployment: Download from GCS bucket (fast, same region)
+#   - Local development: Download from GitHub (no GCS credentials needed)
+
+logger.info("📂 Checking data availability (cache + vector data)...")
+if not check_data_exists():
+    logger.info("📥 Incomplete or missing data - downloading complete dataset...")
+
+    if is_vertex_deployment:
+        # Cloud deployment - download from GCS
+        if not download_all_data_from_gcs(bucket_name="test-first-deployment"):
+            logger.error("❌ Failed to download data from GCS")
+            raise RuntimeError("Data download from GCS failed")
+    else:
+        # Local development - download from GitHub
+        # if not download_all_data_from_github():
+        #     logger.error("❌ Failed to download data from GitHub")
+        #     raise RuntimeError("Data download from GitHub failed")
+        logger.info("ℹ️ Skipping GitHub data download (for testing purposes)")
+
+    logger.info("✅ Complete data download finished")
+else:
+    logger.info("✅ Complete data found (cache + vector data)")
+
+# --- Pre-load Data (Eager Loading) ---
+# Now that cache is guaranteed to exist, load it into memory
+logger.info("📂 Pre-loading NSE stock data into memory...")
 _ = NSESTORE.df  # Force immediate load (triggers cache check or CSV load)
 logger.info("✅ Data loaded: %d rows, %d symbols", len(NSESTORE.df), NSESTORE.total_symbols)
 logger.info("📅 Date range: %s", NSESTORE.get_data_context())
@@ -58,19 +93,30 @@ retry_config = types.HttpRetryOptions(
 
 # --- 4. Initialize Model and Root Agent ---
 # Default: Use Flash-Lite for all agents (fast, cost-effective)
-lite_model = Gemini(model="gemini-2.5-flash-lite",
-                    api_key=GOOGLE_API_KEY, retry_options=retry_config)
-flash_model = Gemini(model="gemini-2.5-flash",
-                     api_key=GOOGLE_API_KEY, retry_options=retry_config)
-pro_model = Gemini(model="gemini-2.5-pro",
-                   api_key=GOOGLE_API_KEY, retry_options=retry_config)
+# Note: When deployed to Vertex AI, don't pass api_key - it uses ADC (Application Default Credentials)
+# For local development, api_key is used
+is_vertex_deployment = os.getenv("K_SERVICE") is not None  # Cloud Run sets this env var
+
+if is_vertex_deployment:
+    # Vertex AI deployment - use ADC (no api_key)
+    lite_model = Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config)
+    flash_model = Gemini(model="gemini-2.5-flash", retry_options=retry_config)
+    pro_model = Gemini(model="gemini-2.5-pro", retry_options=retry_config)
+else:
+    # Local development - use API key
+    lite_model = Gemini(model="gemini-2.5-flash-lite",
+                        api_key=GOOGLE_API_KEY, retry_options=retry_config)
+    flash_model = Gemini(model="gemini-2.5-flash",
+                         api_key=GOOGLE_API_KEY, retry_options=retry_config)
+    pro_model = Gemini(model="gemini-2.5-pro",
+                       api_key=GOOGLE_API_KEY, retry_options=retry_config)
 
 # Create pipeline with optimized model selection
 root_agent = create_pipeline(
     entry_model=lite_model,        # Flash-Lite for Entry (simple classification)
     market_model=flash_model, # Flash for Market (complex analysis with tools)
     news_model=lite_model,         # Flash-Lite for News (simple google search)
-    merger_model=flash_model   # Pro for Merger (report synthesis)
+    merger_model=pro_model   # Pro for Merger (report synthesis)
 )
 
 # Override root_agent's module path to fix ADK path detection issue
@@ -91,20 +137,7 @@ app = App(
 logger.info("✅ App initialized with context compaction enabled.")
 logger.info("   Compaction: interval=3 invocations, overlap_size=1 turn")
 
-# --- 6. Initialize Database Session Service ---
-# Use SQLite for persistent conversation history
-# db_path = "sqlite:///investor_agent/data/sessions.db"
-# session_service = DatabaseSessionService(db_url=db_path)
-# logger.info(f"📦 Database session service initialized: {db_path}")
-
-# # --- 7. Create Runner with Session Service ---
-# # The runner ties together the app and session service
-# runner = Runner(app=app, session_service=session_service)
-# logger.info("✅ Runner initialized with database sessions.")
-
-# --- 8. Export for ADK Web Server ---
-# The ADK web command will look for 'app' and 'runner'
-# Usage: adk web (auto-discovers apps in current directory)
-# Note: App name MUST match the directory name (investor_agent) for session persistence to work
-
-agent = root_agent
+# Export root_agent for ADK eval to find
+# (Already defined above at line ~122, just making it explicit here)
+agent = root_agent  # ADK eval looks for either 'agent' or 'root_agent'
+agent.__module__ = "investor_agent.agent"  # Fix module path for ADK eval
