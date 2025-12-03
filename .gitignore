@@ -5,6 +5,7 @@ vector-data/
 user.json
 data/
 testpublish/
+.backup*/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

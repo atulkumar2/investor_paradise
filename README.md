@@ -50,6 +50,7 @@ The information, analysis, recommendations, and trading strategies provided by *
   - [Option 1: Web UI (ADK Web)](#option-1-web-ui-adk-web)
   - [Option 2: Command Line (CLI)](#option-2-command-line-cli)
   - [Option 3: Docker Deployment](#option-3-🐳-docker-deployment)
+  - [Option 4: Google Cloud Deployment (Vertex AI)](#option-4-️-google-cloud-deployment-vertex-ai-agent-engine)
 - [Sample Questions](#sample-questions)
 - [Troubleshooting](#troubleshooting)
 - [Project Structure](#project-structure)
@@ -469,6 +470,17 @@ investor-paradise-cli
 
 **Best for**: Interactive exploration, multi-turn conversations, visual analysis
 
+> **Note for Local Clones**: If you cloned this repo and are running ADK web for the first time, you need to download data files first:
+> ```bash
+> # One-time setup: Download required data files (~50MB)
+> python setup_data.py
+> 
+> # Then start the web server
+> adk web . --log_level INFO
+> ```
+> 
+> The CLI automatically handles data downloads, so `setup_data.py` is only needed for ADK web usage.
+
 ```bash
 # Start the ADK web server
 adk web . --log_level INFO
@@ -610,6 +622,74 @@ For production environments:
 3. **Set up reverse proxy** (e.g., nginx) for SSL/HTTPS
 4. **Configure monitoring** (Prometheus + Grafana)
 5. **Set up backup** for `sessions.db` and cache files
+
+---
+
+### Option 4: ☁️ Google Cloud Deployment (Vertex AI Agent Engine)
+
+**Best for**: Production deployment, scalable cloud hosting, enterprise usage
+
+We've successfully deployed **Investor Paradise** to Google Cloud's **Vertex AI Agent Engine** using the official [agent-starter-pack](https://github.com/GoogleCloudPlatform/agent-starter-pack). This provides a fully managed, serverless deployment with auto-scaling and built-in monitoring.
+
+#### 🎯 Key Benefits
+
+- ✅ **Serverless**: No infrastructure management, auto-scales based on traffic
+- ✅ **Managed**: Google handles deployment, monitoring, and updates
+- ✅ **Secure**: Uses Google Cloud's Application Default Credentials (no API keys in code)
+- ✅ **Cost-effective**: Pay only for actual usage (no idle server costs)
+- ✅ **Integrated**: Works with Vertex AI Agent Playground for testing
+
+#### 📦 Deployment Architecture
+
+```
+investor_paradise/
+├── investor_agent/          # Packaged and deployed to Cloud Run
+│   ├── agent.py            # Auto-detects cloud env (K_SERVICE variable)
+│   ├── data_engine.py      # Loads data from GCS bucket
+│   └── cache_manager.py    # Downloads data on container startup
+├── .gcloudignore           # Excludes large data files (>8MB limit)
+└── deployment/
+    ├── agent_engine_config.yaml  # Vertex AI configuration
+    └── Dockerfile.agent-engine   # Container definition
+```
+
+**Smart Environment Detection**: The agent automatically detects deployment environment:
+- **Cloud**: Uses ADC (Application Default Credentials), downloads data from GCS
+- **Local**: Uses API key, downloads data from GitHub releases
+
+#### 🚀 Deployment Highlights
+
+1. **Data Strategy**: 
+   - Data files excluded from deployment (8MB payload limit)
+   - Automatically downloaded from GCS bucket on container startup
+   - Supports both cache data (49MB parquet) and vector data (news embeddings)
+
+2. **Configuration**:
+   ```yaml
+   # deployment/agent_engine_config.yaml
+   agent_engine:
+     app_name: investor-paradise
+     root_path: ./investor_agent
+     gcp_project_id: your-project-id
+     gcp_region: us-central1
+   ```
+
+3. **Deployment Command**:
+   ```bash
+   # Using agent-starter-pack
+   make backend
+   ```
+
+4. **Testing**: Access via Vertex AI Agent Playground in Google Cloud Console
+
+#### 📚 Learn More
+
+- **Setup Guide**: See `deployment/DEPLOYMENT_GUIDE.md` for complete instructions
+- **Agent Starter Pack**: [GoogleCloudPlatform/agent-starter-pack](https://github.com/GoogleCloudPlatform/agent-starter-pack)
+- **Architecture**: Cloud Run → Vertex AI Agent Engine → Gemini Models
+- **Data Storage**: Google Cloud Storage (GCS) for market data and embeddings
+
+**Note**: Cloud deployment requires Google Cloud Platform account and project setup. See deployment guide for detailed configuration steps.
 
 ---
 

@@ -1,0 +1,28 @@
+# Exclude from deployment payload (these will be downloaded from GCS at runtime)
+.gcloudignore
+.git
+.gitignore
+*.pyc
+__pycache__/
+*.ipynb
+.venv/
+.env
+
+# Exclude large data files (will download from GCS bucket at startup)
+investor_agent/data/cache/
+investor_agent/data/vector-data/
+investor_agent/data/NSE_RawData/
+
+# Exclude build artifacts
+*.egg-info/
+dist/
+build/
+
+# Exclude logs and temp files
+*.log
+logs.txt
+downloaded-logs-*.json
+
+# Exclude test and evaluation files
+evaluations/
+*.evalset.json
