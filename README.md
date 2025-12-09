@@ -442,10 +442,7 @@ You can install Investor Paradise CLI as a package without cloning the repositor
 # Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install Google ADK (pre-requisite)
-uv pip install "google-adk @ git+https://github.com/google/adk-python/"
-
-# Install Investor Paradise CLI
+# Install Investor Paradise CLI (includes google-adk)
 uv tool install investor-paradise-cli
 
 # Run from anywhere

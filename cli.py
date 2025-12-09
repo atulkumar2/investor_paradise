@@ -8,13 +8,14 @@ import asyncio
 import os
 import sys
 import traceback
+from pathlib import Path
 from typing import Tuple
 
 from dotenv import load_dotenv
 from google.adk.apps.app import App, EventsCompactionConfig
 from google.adk.models.google_llm import Gemini
 from google.adk.runners import Runner
-from google.adk.sessions import DatabaseSessionService
+from google.adk.sessions.sqlite_session_service import SqliteSessionService
 from google.genai import types
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -202,15 +203,13 @@ def _create_app(lite_model: Gemini, flash_model: Gemini, pro_model: Gemini) -> T
     return app, root_agent
 
 
-def _create_runner(app: App) -> tuple[Runner, DatabaseSessionService]:
-    """Create the DatabaseSessionService and Runner."""
+def _create_runner(app: App) -> tuple[Runner, SqliteSessionService]:
+    """Create the SqliteSessionService and Runner."""
     # Use Path to find the data directory relative to the investor_agent package
-    from pathlib import Path
     data_dir = Path(__file__).parent / "investor_agent" / "data"
-    db_path = data_dir / "investor_agent_sessions.db"
-    db_url = f"sqlite+aiosqlite:///{db_path}"
-    logger.info("Setting up session service with database: %s", db_url)
-    session_service = DatabaseSessionService(db_url=db_url)
+    db_path = str(data_dir / "investor_agent_sessions.db")
+    logger.info("Setting up session service with database: %s", db_path)
+    session_service = SqliteSessionService(db_path=db_path)
     runner = Runner(app=app, session_service=session_service)
     return runner, session_service
 

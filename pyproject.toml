@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "investor-paradise-cli"
-version = "0.1.1"
+version = "0.1.4"
 description = "AI-powered NSE stock analysis agent with interactive CLI and web interface"
 readme = "README.md"
 requires-python = "==3.11.14"
@@ -15,7 +15,7 @@ authors = [
 ]
 keywords = ["stocks", "nse", "analysis", "ai", "gemini", "trading", "investment"]
 dependencies = [
-    "google-adk[eval] @ git+https://github.com/google/adk-python/",
+    "google-adk[eval]",
     "google-cloud-storage",
     "google-genai",
     "pandas",
@@ -57,5 +57,3 @@ select = ["E", "F", "I"]
 line-length = 100
 target-version = ["py311"]
 
-[tool.uv.sources]
-google-adk = { git = "https://github.com/google/adk-python" }

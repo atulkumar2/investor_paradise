@@ -35,18 +35,15 @@ Verify installation:
 uv --version
 ```
 
-## Step 2: Install Google ADK (Pre-requisite)
-
-**Important:** You must install Google ADK from GitHub first, as it's a required dependency.
+## Step 2: Install Investor Paradise CLI
 
 ```bash
-uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
+uv tool install investor-paradise-cli
 ```
 
 This will:
 
-- Clone and install Google ADK from GitHub
-- Set up all required dependencies
+- Install the CLI tool globally along with all dependencies (including google-adk)
 
 ## Step 3: Install Investor Paradise CLI
 
@@ -71,14 +68,10 @@ uv tool install git+https://github.com/atulkumar2/investor_paradise.git
 
 ### Method 2: Using `uv pip install` (Works Anywhere)
 
+**From PyPI (Stable Release):**
+
 ```bash
 uv pip install investor-paradise-cli
-```
-
-**From TestPyPI (Development/Testing):**
-
-```bash
-uv pip install --index-url https://test.pypi.org/simple/ investor-paradise-cli
 ```
 
 **From GitHub (Latest Development):**
@@ -102,13 +95,10 @@ cd my-stock-analysis
 uv init
 ```
 
-Then add the dependencies:
+Then add the dependency:
 
 ```bash
-# Add Google ADK
-uv add "google-adk @ git+https://github.com/google/adk-python/"
-
-# Add Investor Paradise CLI
+# Add Investor Paradise CLI (includes google-adk)
 uv add investor-paradise-cli
 ```
 
@@ -345,10 +335,7 @@ cd my-stock-analysis
 # Initialize UV project
 uv init
 
-# Add Google ADK (pre-requisite)
-uv add "google-adk[eval] @ git+https://github.com/google/adk-python/"
-
-# Add Investor Paradise CLI
+# Add Investor Paradise CLI (includes google-adk)
 uv add investor-paradise-cli
 
 # Run the CLI
@@ -418,13 +405,10 @@ By default, data is stored in:
 # 1. Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. Install Google ADK (pre-requisite)
-uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
-
-# 3. Install Investor Paradise CLI globally
+# 2. Install Investor Paradise CLI globally (includes google-adk)
 uv tool install investor-paradise-cli
 
-# 4. Run the CLI from anywhere (it will prompt for API key on first run)
+# 3. Run the CLI from anywhere (it will prompt for API key on first run)
 investor-paradise-cli
 ```
 
@@ -434,13 +418,10 @@ investor-paradise-cli
 # 1. Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. Install Google ADK (pre-requisite)
-uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
-
-# 3. Install Investor Paradise CLI
+# 2. Install Investor Paradise CLI (includes google-adk)
 uv pip install investor-paradise-cli
 
-# 4. Run the CLI
+# 3. Run the CLI
 investor-paradise-cli
 ```
 
@@ -453,13 +434,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 2. Create and initialize project
 mkdir my-stock-analysis && cd my-stock-analysis && uv init
 
-# 3. Install Google ADK (pre-requisite)
-uv add "google-adk[eval] @ git+https://github.com/google/adk-python/"
-
-# 4. Install Investor Paradise CLI
+# 3. Install Investor Paradise CLI (includes google-adk)
 uv add investor-paradise-cli
 
-# 5. Run the CLI
+# 4. Run the CLI
 uv run investor-paradise-cli
 ```
 
@@ -491,7 +469,6 @@ pip install uv
 # Use fresh virtual environment
 uv venv --python 3.11
 source .venv/bin/activate
-uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
 uv pip install investor-paradise-cli
 ```
 
@@ -500,9 +477,7 @@ uv pip install investor-paradise-cli
 **Solution:**
 
 ```bash
-# Make sure to install Google ADK first (it's a pre-requisite)
-uv add "google-adk[eval] @ git+https://github.com/google/adk-python/"
-# Then install the CLI
+# Reinstall the CLI to ensure all dependencies are installed
 uv add investor-paradise-cli
 ```
 
@@ -609,19 +584,16 @@ rm -rf investor_agent/data/
 
 ```bash
 # Simplest Installation (Recommended)
-uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
 uv tool install investor-paradise-cli
 investor-paradise-cli
 
 # Alternative: Using uv pip
-uv pip install "google-adk[eval] @ git+https://github.com/google/adk-python/"
 uv pip install investor-paradise-cli
 investor-paradise-cli
 
 # Project-Based Installation
 mkdir my-stock-analysis && cd my-stock-analysis
 uv init
-uv add "google-adk[eval] @ git+https://github.com/google/adk-python/"
 uv add investor-paradise-cli
 uv run investor-paradise-cli
 
